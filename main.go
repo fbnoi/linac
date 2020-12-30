@@ -1,25 +1,15 @@
 package main
 
 import (
+	"linac/net/http/linac"
+	"log"
 	"net/http"
-	"regexp"
 )
 
-type mux struct {
-	router routes
-}
-
-type routes []*route
-
-type route struct {
-	regex   *regexp.Regexp
-	params  map[int]string
-	Handler http.HandlerFunc
-}
-
 func main() {
-	// m := &mux{}
-	// m.Handle("/test/:id(\\d+)", func(w http.ResponseWriter, r *http.Request) {
-	// })
-	// log.Fatal(http.ListenAndServe(":80", m))
+	engine := linac.NewEngine()
+	engine.Handle("/test/:id(\\d+)", func(w http.ResponseWriter, r *http.Request) {
+		log.Print("hello world")
+	})
+	engine.Run(":8089")
 }

@@ -11,6 +11,7 @@ import (
 // Router model
 type Router struct {
 	routes []*Route
+	engine *Engine
 }
 
 // Handle http
