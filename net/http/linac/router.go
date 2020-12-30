@@ -14,8 +14,7 @@ type Router struct {
 	engine *Engine
 }
 
-// Handle http
-func (router *Router) Handle(pattern string, handler http.HandlerFunc) {
+func (router *Router) handleFunc(pattern string, handler http.HandlerFunc) {
 	parts := strings.Split(pattern, "/")
 	j := 0
 	params := make(map[int]string)

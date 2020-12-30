@@ -22,6 +22,16 @@ type Engine struct {
 	server *atomic.Value
 }
 
+func (engine *Engine) handle(path string, handler Handler) {
+	engine.Router.handleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		context := &Context{
+			writer:  w,
+			request: r,
+		}
+		handler(context)
+	})
+}
+
 // Run 运行 http server engine
 func (engine *Engine) Run(address string) {
 	serve := &http.Server{
