@@ -6,6 +6,7 @@ import "net/http"
 type Context struct {
 	writer  http.ResponseWriter
 	request *http.Request
+	params  map[string]string
 }
 
 // Handler http 请求处理

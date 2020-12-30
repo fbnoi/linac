@@ -22,8 +22,8 @@ type Engine struct {
 	server *atomic.Value
 }
 
-func (engine *Engine) handle(path string, handler Handler) {
-	engine.Router.handleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+func (engine *Engine) addRoute(path, method string, handler Handler) {
+	engine.Router.handleFunc(path, method, func(w http.ResponseWriter, r *http.Request) {
 		context := &Context{
 			writer:  w,
 			request: r,

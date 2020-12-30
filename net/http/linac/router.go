@@ -4,8 +4,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"regexp"
-	"strings"
 )
 
 // Router model
@@ -14,36 +12,19 @@ type Router struct {
 	engine *Engine
 }
 
-func (router *Router) handleFunc(pattern string, handler http.HandlerFunc) {
-	parts := strings.Split(pattern, "/")
-	j := 0
-	params := make(map[int]string)
-	for i, part := range parts {
-		if strings.HasPrefix(part, ":") {
-			expr := "([^/]+)"
+// AddRoute 向路由器中添加路由
+func (router *Router) AddRoute(path, method string, handler Handler) *Router {
+	router.engine.addRoute(path, method, handler)
+	return router
+}
 
-			// a user may choose to override the defult expression
-			// similar to expressjs: ‘/user/:id([0-9]+)’
-			if index := strings.Index(part, "("); index != -1 {
-				expr = part[index:]
-				part = part[:index]
-			}
-			params[j] = part[1:]
-			parts[i] = expr
-			j++
-		}
+// handleFunc 添加路由处理方法
+// pattern 路由模式，必须以 '/' 开头，
+func (router *Router) handleFunc(pattern, method string, handler http.HandlerFunc) {
+	if pattern[0] != '/' {
+		panic("pattern must start with '/'")
 	}
-	pattern = strings.Join(parts, "/")
-	log.Print(pattern)
-	regex, regexErr := regexp.Compile(pattern)
-	if regexErr != nil {
-		panic(regexErr)
-	}
-	router.routes = append(router.routes, &Route{
-		Regex:   regex,
-		Params:  params,
-		Handler: handler,
-	})
+	router.routes = append(router.routes, newRoute(pattern, method, handler))
 }
 
 // ServeHTTP ServeHTTP
@@ -60,7 +41,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		params := make(map[string]string)
-
 		if len(route.Params) > 0 {
 			//add url parameters to the query param map
 			values := r.URL.Query()
