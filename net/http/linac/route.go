@@ -10,19 +10,60 @@ import (
 func newRoute(pattern, method string, handler ...Handler) *Route {
 	regex, params := parseURI(pattern)
 	return &Route{
-		Regex:    regex,
-		Params:   params,
-		Method:   method,
-		Handlers: handler,
+		regex:    regex,
+		params:   params,
+		method:   method,
+		handlers: handler,
 	}
+}
+
+// RouteGroup Route集合
+type RouteGroup struct {
+	path     string
+	handlers []Handler
+	routes   []*Route
+}
+
+// AddRoute 向路由器中添加路由
+func (group *RouteGroup) addRoute(path, method string, handler ...Handler) *RouteGroup {
+	if path[0] != '/' {
+		panic("pattern must start with '/'")
+	}
+	group.routes = append(group.routes, newRoute(path, method, handler...))
+	return group
+}
+
+// GET 为一个路由注册一个GET方法
+func (group *RouteGroup) GET(path string, handler ...Handler) *RouteGroup {
+	return group.addRoute(path, "GET", handler...)
+}
+
+// POST 为一个路由注册一个POST方法
+func (group *RouteGroup) POST(path string, handler ...Handler) *RouteGroup {
+	return group.addRoute(path, "POST", handler...)
+}
+
+// PUT 为一个路由注册一个PUT方法
+func (group *RouteGroup) PUT(path string, handler ...Handler) *RouteGroup {
+	return group.addRoute(path, "PUT", handler...)
+}
+
+// DELETE 为一个路由注册一个DELETE方法
+func (group *RouteGroup) DELETE(path string, handler ...Handler) *RouteGroup {
+	return group.addRoute(path, "DELETE", handler...)
+}
+
+// HEAD 为一个路由注册一个HEAD方法
+func (group *RouteGroup) HEAD(path string, handler ...Handler) *RouteGroup {
+	return group.addRoute(path, "HEAD", handler...)
 }
 
 // Route model
 type Route struct {
-	Regex    *regexp.Regexp
-	Method   string
-	Params   map[int]string
-	Handlers []Handler
+	regex    *regexp.Regexp
+	method   string
+	params   map[int]string
+	handlers []Handler
 }
 
 // handle 处理http请求
@@ -30,19 +71,19 @@ type Route struct {
 // 2.调用 Handler 处理 context
 func (route *Route) handle(ctx *Context) {
 	r := ctx.Request
-	matches := route.Regex.FindStringSubmatch(r.RequestURI)
+	matches := route.regex.FindStringSubmatch(r.RequestURI)
 	params := make(map[string]string)
-	if len(route.Params) > 0 {
+	if len(route.params) > 0 {
 		for i, match := range matches[1:] {
-			params[route.Params[i]] = match
+			params[route.params[i]] = match
 		}
 	}
 	ctx.Params = params
-	for i, handler := range route.Handlers {
+	for i, handler := range route.handlers {
 		if ctx.IsAbort() {
 			return
 		}
-		if i == len(route.Handlers) && ctx.Request.Method != route.Method {
+		if i == len(route.handlers) && ctx.Request.Method != route.method {
 			ctx.Abort(http.StatusMethodNotAllowed)
 		}
 		handler(ctx)

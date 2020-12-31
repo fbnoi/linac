@@ -76,16 +76,17 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (router *Router) metchRoute(ctx *Context) (route *Route, ok bool) {
 	r := ctx.Request
 	for _, cond := range router.routes {
-		if !cond.Regex.MatchString(r.RequestURI) {
+		if !cond.regex.MatchString(r.RequestURI) {
 			continue
 		}
-		matches := cond.Regex.FindStringSubmatch(r.RequestURI)
-		//double check that the Route matches the URL pattern.
+		matches := cond.regex.FindStringSubmatch(r.RequestURI)
+		//再次检测是否匹配
 		if len(matches[0]) != len(r.RequestURI) {
 			continue
 		}
 		route, ok = cond, true
-		if r.Method == route.Method {
+		// 如果路由模式匹配，并且http方法相同，即刻返回
+		if r.Method == route.method {
 			return
 		}
 	}
