@@ -92,6 +92,7 @@ func (router *Router) metchRoute(ctx *Context) (route *Route, ok bool) {
 	return
 }
 
+//默认 not found handler，返回404状态码
 func defaultNotFoundHandler(context *Context) {
-
+	context.Abort(http.StatusNotFound)
 }
