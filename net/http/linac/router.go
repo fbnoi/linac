@@ -50,27 +50,12 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Writer:  w,
 		Request: r,
 	}
-	if route, ok := router.metchRoute(context); !ok {
-
-	} else {
-		route.handle(context)
-	}
-
-	for _, route := range router.routes {
-		if !route.Regex.MatchString(r.RequestURI) {
-			continue
-		}
-		matches := route.Regex.FindStringSubmatch(r.RequestURI)
-		//double check that the Route matches the URL pattern.
-		if len(matches[0]) != len(r.RequestURI) {
-			continue
-		}
-		route.Handler(context)
-	}
+	route := router.metchRoute(context)
+	route.handle(context)
 }
 
 // metchRoute 匹配context路由并返回
-func (router *Router) metchRoute(ctx *Context) (*Route, bool) {
+func (router *Router) metchRoute(ctx *Context) *Route {
 	r := ctx.Request
 	var route *Route
 	for _, route = range router.routes {
@@ -82,7 +67,7 @@ func (router *Router) metchRoute(ctx *Context) (*Route, bool) {
 		if len(matches[0]) != len(r.RequestURI) {
 			continue
 		}
-		return route, true
+		return route
 	}
-	return route, false
+	return route
 }
