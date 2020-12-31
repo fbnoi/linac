@@ -14,23 +14,11 @@ type Router struct {
 
 // AddRoute 向路由器中添加路由
 func (router *Router) addRoute(path, method string, handler Handler) *Router {
-	router.handleFunc(path, method, func(w http.ResponseWriter, r *http.Request) {
-		context := &Context{
-			writer:  w,
-			request: r,
-		}
-		handler(context)
-	})
-	return router
-}
-
-// handleFunc 添加路由处理方法
-// pattern 路由模式，必须以 '/' 开头，
-func (router *Router) handleFunc(pattern, method string, handler http.HandlerFunc) {
-	if pattern[0] != '/' {
+	if path[0] != '/' {
 		panic("pattern must start with '/'")
 	}
-	router.routes = append(router.routes, newRoute(pattern, method, handler))
+	router.routes = append(router.routes, newRoute(path, method, handler))
+	return router
 }
 
 // GET 为一个路由注册一个GET方法
@@ -58,8 +46,12 @@ func (router *Router) HEAD(path string, handler Handler) *Router {
 	return router.addRoute(path, "HEAD", handler)
 }
 
-// ServeHTTP 响应http请求
+// ServeHTTP 响应http请求 此处进行context内容的生成
 func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	context := &Context{
+		Writer:  w,
+		Request: r,
+	}
 	for _, route := range router.routes {
 		if !route.Regex.MatchString(r.RequestURI) {
 			continue
@@ -84,6 +76,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			r.URL.RawQuery = url.Values(values).Encode() + "&" + r.URL.RawQuery
 			//r.URL.RawQuery = url.Values(values).Encode()
 		}
-		route.Handler(w, r)
+		route.Handler(context)
 	}
 }

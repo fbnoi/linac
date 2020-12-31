@@ -1,13 +1,12 @@
 package linac
 
 import (
-	"net/http"
 	"regexp"
 	"strings"
 )
 
 // newRoute 添加路由处理方法
-func newRoute(pattern, method string, handler http.HandlerFunc) *Route {
+func newRoute(pattern, method string, handler Handler) *Route {
 	regex, params := parseURI(pattern)
 	return &Route{
 		Regex:   regex,
@@ -51,5 +50,5 @@ type Route struct {
 	Regex   *regexp.Regexp
 	Method  string
 	Params  map[int]string
-	Handler http.HandlerFunc
+	Handler Handler
 }

@@ -4,8 +4,8 @@ import "net/http"
 
 // Context http 请求上下文
 type Context struct {
-	writer  http.ResponseWriter
-	request *http.Request
+	Writer  http.ResponseWriter
+	Request *http.Request
 	params  map[string]string
 }
 
