@@ -8,6 +8,8 @@ import (
 type Router struct {
 	routes []*Route
 	engine *Engine
+
+	notFoundHandler Handler
 }
 
 // AddRoute 向路由器中添加路由
@@ -44,30 +46,52 @@ func (router *Router) HEAD(path string, handler Handler) *Router {
 	return router.addRoute(path, "HEAD", handler)
 }
 
+// SetNotFoundHandler 设置默认 404 handler
+func (router *Router) SetNotFoundHandler(handler Handler) *Router {
+	router.notFoundHandler = handler
+	return router
+}
+
+func (router *Router) getNotFoundHandler() Handler {
+	if router.notFoundHandler == nil {
+		router.notFoundHandler = defaultNotFoundHandler
+	}
+	return router.notFoundHandler
+}
+
 // ServeHTTP 响应http请求 此处进行context内容的生成
 func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	context := &Context{
 		Writer:  w,
 		Request: r,
 	}
-	route := router.metchRoute(context)
-	route.handle(context)
+	if route, ok := router.metchRoute(context); ok {
+		route.handle(context)
+	} else {
+		router.getNotFoundHandler()(context)
+	}
 }
 
 // metchRoute 匹配context路由并返回
-func (router *Router) metchRoute(ctx *Context) *Route {
+func (router *Router) metchRoute(ctx *Context) (route *Route, ok bool) {
 	r := ctx.Request
-	var route *Route
-	for _, route = range router.routes {
-		if !route.Regex.MatchString(r.RequestURI) {
+	for _, cond := range router.routes {
+		if !cond.Regex.MatchString(r.RequestURI) {
 			continue
 		}
-		matches := route.Regex.FindStringSubmatch(r.RequestURI)
+		matches := cond.Regex.FindStringSubmatch(r.RequestURI)
 		//double check that the Route matches the URL pattern.
 		if len(matches[0]) != len(r.RequestURI) {
 			continue
 		}
-		return route
+		route, ok = cond, true
+		if r.Method == route.Method {
+			return
+		}
 	}
-	return route
+	return
+}
+
+func defaultNotFoundHandler(context *Context) {
+
 }
