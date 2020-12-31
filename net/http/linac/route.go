@@ -16,6 +16,32 @@ func newRoute(pattern, method string, handler Handler) *Route {
 	}
 }
 
+// Route model
+type Route struct {
+	Regex   *regexp.Regexp
+	Method  string
+	Params  map[int]string
+	Handler Handler
+}
+
+// handle 处理http请求
+// 1.解析路由参数
+// 2.调用 Handler 处理 context
+func (route *Route) handle(ctx *Context) {
+	r := ctx.Request
+	matches := route.Regex.FindStringSubmatch(r.RequestURI)
+	params := make(map[string]string)
+	if len(route.Params) > 0 {
+		values := r.URL.Query()
+		for i, match := range matches[1:] {
+			values.Add(route.Params[i], match)
+			params[route.Params[i]] = match
+		}
+	}
+	ctx.Params = params
+	route.Handler(ctx)
+}
+
 // pattern 路由模式
 // 如：'/users' 或者 '/users/:id'
 // 其中 :id 将被解析为路由参数。也可以为参数添加正则验证，
@@ -43,12 +69,4 @@ func parseURI(pattern string) (*regexp.Regexp, map[int]string) {
 		panic(regexErr)
 	}
 	return regex, params
-}
-
-// Route model
-type Route struct {
-	Regex   *regexp.Regexp
-	Method  string
-	Params  map[int]string
-	Handler Handler
 }
