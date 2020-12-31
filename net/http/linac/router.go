@@ -13,37 +13,37 @@ type Router struct {
 }
 
 // AddRoute 向路由器中添加路由
-func (router *Router) addRoute(path, method string, handler Handler) *Router {
+func (router *Router) addRoute(path, method string, handler ...Handler) *Router {
 	if path[0] != '/' {
 		panic("pattern must start with '/'")
 	}
-	router.routes = append(router.routes, newRoute(path, method, handler))
+	router.routes = append(router.routes, newRoute(path, method, handler...))
 	return router
 }
 
 // GET 为一个路由注册一个GET方法
-func (router *Router) GET(path string, handler Handler) *Router {
-	return router.addRoute(path, "GET", handler)
+func (router *Router) GET(path string, handler ...Handler) *Router {
+	return router.addRoute(path, "GET", handler...)
 }
 
 // POST 为一个路由注册一个POST方法
-func (router *Router) POST(path string, handler Handler) *Router {
-	return router.addRoute(path, "POST", handler)
+func (router *Router) POST(path string, handler ...Handler) *Router {
+	return router.addRoute(path, "POST", handler...)
 }
 
 // PUT 为一个路由注册一个PUT方法
-func (router *Router) PUT(path string, handler Handler) *Router {
-	return router.addRoute(path, "PUT", handler)
+func (router *Router) PUT(path string, handler ...Handler) *Router {
+	return router.addRoute(path, "PUT", handler...)
 }
 
 // DELETE 为一个路由注册一个DELETE方法
-func (router *Router) DELETE(path string, handler Handler) *Router {
-	return router.addRoute(path, "DELETE", handler)
+func (router *Router) DELETE(path string, handler ...Handler) *Router {
+	return router.addRoute(path, "DELETE", handler...)
 }
 
 // HEAD 为一个路由注册一个HEAD方法
-func (router *Router) HEAD(path string, handler Handler) *Router {
-	return router.addRoute(path, "HEAD", handler)
+func (router *Router) HEAD(path string, handler ...Handler) *Router {
+	return router.addRoute(path, "HEAD", handler...)
 }
 
 // SetNotFoundHandler 设置默认 404 handler

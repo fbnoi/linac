@@ -1,27 +1,28 @@
 package linac
 
 import (
+	"net/http"
 	"regexp"
 	"strings"
 )
 
 // newRoute 添加路由处理方法
-func newRoute(pattern, method string, handler Handler) *Route {
+func newRoute(pattern, method string, handler ...Handler) *Route {
 	regex, params := parseURI(pattern)
 	return &Route{
-		Regex:   regex,
-		Params:  params,
-		Method:  method,
-		Handler: handler,
+		Regex:    regex,
+		Params:   params,
+		Method:   method,
+		Handlers: handler,
 	}
 }
 
 // Route model
 type Route struct {
-	Regex   *regexp.Regexp
-	Method  string
-	Params  map[int]string
-	Handler Handler
+	Regex    *regexp.Regexp
+	Method   string
+	Params   map[int]string
+	Handlers []Handler
 }
 
 // handle 处理http请求
@@ -32,14 +33,20 @@ func (route *Route) handle(ctx *Context) {
 	matches := route.Regex.FindStringSubmatch(r.RequestURI)
 	params := make(map[string]string)
 	if len(route.Params) > 0 {
-		values := r.URL.Query()
 		for i, match := range matches[1:] {
-			values.Add(route.Params[i], match)
 			params[route.Params[i]] = match
 		}
 	}
 	ctx.Params = params
-	route.Handler(ctx)
+	for i, handler := range route.Handlers {
+		if ctx.IsAbort() {
+			return
+		}
+		if i == len(route.Handlers) && ctx.Request.Method != route.Method {
+			ctx.Abort(http.StatusMethodNotAllowed)
+		}
+		handler(ctx)
+	}
 }
 
 // pattern 路由模式
