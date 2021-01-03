@@ -2,6 +2,7 @@ package linac
 
 import (
 	"net/http"
+	xpath "path"
 	"regexp"
 	"strings"
 )
@@ -29,8 +30,24 @@ func (group *RouteGroup) addRoute(path, method string, handler ...Handler) *Rout
 	if path[0] != '/' {
 		panic("pattern must start with '/'")
 	}
+	path = group.absPath(path)
+	handler = group.mergeHandlers(handler...)
 	group.routes = append(group.routes, newRoute(path, method, handler...))
+
 	return group
+}
+
+// Group 新建分组
+func (group *RouteGroup) Group(path string, register func(*RouteGroup) *RouteGroup, handlers ...Handler) {
+	path = group.absPath(path)
+	handlers = group.mergeHandlers(handlers...)
+	newGroup := &RouteGroup{
+		path:     path,
+		handlers: handlers,
+		routes:   []*Route{},
+	}
+	newGroup = register(newGroup)
+	group.routes = append(group.routes, newGroup.routes...)
 }
 
 // GET 为一个路由注册一个GET方法
@@ -56,6 +73,22 @@ func (group *RouteGroup) DELETE(path string, handler ...Handler) *RouteGroup {
 // HEAD 为一个路由注册一个HEAD方法
 func (group *RouteGroup) HEAD(path string, handler ...Handler) *RouteGroup {
 	return group.addRoute(path, "HEAD", handler...)
+}
+
+func (group *RouteGroup) absPath(path string) string {
+	if path == "" {
+		return group.path
+	}
+	finalPath := xpath.Join(group.path, path)
+	appendSlash := path[len(path)-1] == '/' && finalPath[len(finalPath)-1] != '/'
+	if appendSlash {
+		return finalPath + "/"
+	}
+	return finalPath
+}
+
+func (group *RouteGroup) mergeHandlers(handlers ...Handler) []Handler {
+	return append(group.handlers, handlers...)
 }
 
 // Route model

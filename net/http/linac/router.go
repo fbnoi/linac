@@ -4,46 +4,22 @@ import (
 	"net/http"
 )
 
+// NewRouter 返回一个router
+func NewRouter() *Router {
+	return &Router{
+		RouteGroup: &RouteGroup{
+			path: "/",
+		},
+		notFoundHandler: defaultNotFoundHandler,
+	}
+}
+
 // Router model
 type Router struct {
-	routes []*Route
+	*RouteGroup
 	engine *Engine
 
 	notFoundHandler Handler
-}
-
-// AddRoute 向路由器中添加路由
-func (router *Router) addRoute(path, method string, handler ...Handler) *Router {
-	if path[0] != '/' {
-		panic("pattern must start with '/'")
-	}
-	router.routes = append(router.routes, newRoute(path, method, handler...))
-	return router
-}
-
-// GET 为一个路由注册一个GET方法
-func (router *Router) GET(path string, handler ...Handler) *Router {
-	return router.addRoute(path, "GET", handler...)
-}
-
-// POST 为一个路由注册一个POST方法
-func (router *Router) POST(path string, handler ...Handler) *Router {
-	return router.addRoute(path, "POST", handler...)
-}
-
-// PUT 为一个路由注册一个PUT方法
-func (router *Router) PUT(path string, handler ...Handler) *Router {
-	return router.addRoute(path, "PUT", handler...)
-}
-
-// DELETE 为一个路由注册一个DELETE方法
-func (router *Router) DELETE(path string, handler ...Handler) *Router {
-	return router.addRoute(path, "DELETE", handler...)
-}
-
-// HEAD 为一个路由注册一个HEAD方法
-func (router *Router) HEAD(path string, handler ...Handler) *Router {
-	return router.addRoute(path, "HEAD", handler...)
 }
 
 // SetNotFoundHandler 设置默认 404 handler
@@ -53,9 +29,6 @@ func (router *Router) SetNotFoundHandler(handler Handler) *Router {
 }
 
 func (router *Router) getNotFoundHandler() Handler {
-	if router.notFoundHandler == nil {
-		router.notFoundHandler = defaultNotFoundHandler
-	}
 	return router.notFoundHandler
 }
 
@@ -75,7 +48,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // metchRoute 匹配context路由并返回
 func (router *Router) metchRoute(ctx *Context) (route *Route, ok bool) {
 	r := ctx.Request
-	for _, cond := range router.routes {
+	for _, cond := range router.RouteGroup.routes {
 		if !cond.regex.MatchString(r.RequestURI) {
 			continue
 		}

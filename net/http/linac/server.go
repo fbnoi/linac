@@ -8,7 +8,7 @@ import (
 // NewEngine 返回一个新的 http server engine
 func NewEngine() *Engine {
 	engine := &Engine{
-		Router: &Router{},
+		Router: NewRouter(),
 		server: &atomic.Value{},
 	}
 	engine.Router.engine = engine
