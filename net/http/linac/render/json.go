@@ -11,13 +11,13 @@ const (
 
 // JSON 返回json渲染，特定型
 type JSON struct {
-	Code int         `json:"Code"`
+	Code int         `json:"code"`
 	Err  string      `json:"err,omitempty"`
 	Data interface{} `json:"data"`
 }
 
 // Render Render
-func (j *JSON) Render() (content []byte, err error) {
+func (j JSON) Render() (content []byte, err error) {
 	content, err = xjson.Marshal(j)
 	return
 }
@@ -26,7 +26,7 @@ func (j *JSON) Render() (content []byte, err error) {
 type JSONMap map[string]interface{}
 
 // Render Render
-func (j *JSONMap) Render() (content []byte, err error) {
+func (j JSONMap) Render() (content []byte, err error) {
 	content, err = xjson.Marshal(j)
 	return
 }

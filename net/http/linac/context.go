@@ -9,7 +9,7 @@ import (
 type Context struct {
 	Writer  http.ResponseWriter
 	Request *http.Request
-	Params  map[string]string
+	Params  map[string]interface{}
 
 	abort bool
 }
@@ -28,11 +28,17 @@ func (ctx *Context) IsAbort() bool {
 // JSON  返回json response
 func (ctx *Context) JSON(data interface{}, code int) {
 	ctx.writeContentType(render.ContentJSON)
-	render.Write(&render.JSON{
+	render.Write(render.JSON{
 		Code: code,
 		Data: data,
 		Err:  "",
 	}, ctx.Writer)
+}
+
+// JSONMap  返回json response
+func (ctx *Context) JSONMap(data map[string]interface{}, code int) {
+	ctx.writeContentType(render.ContentJSON)
+	render.Write(render.JSONMap(data), ctx.Writer)
 }
 
 // String 返回 string response

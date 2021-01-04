@@ -9,10 +9,10 @@ func main() {
 	engine := linac.NewEngine()
 	engine.Group("/home", func(router *linac.RouteGroup) *linac.RouteGroup {
 		router.GET("/test", func(ctx *linac.Context) {
-			log.Print("test")
+			ctx.String("hello world")
 		})
 		router.GET("/:id", func(ctx *linac.Context) {
-			log.Print(ctx.Params)
+			ctx.JSONMap(ctx.Params, 200)
 		})
 		return router
 	}, func(ctx *linac.Context) {

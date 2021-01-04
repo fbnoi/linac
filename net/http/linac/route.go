@@ -105,7 +105,7 @@ type Route struct {
 func (route *Route) handle(ctx *Context) {
 	r := ctx.Request
 	matches := route.regex.FindStringSubmatch(r.RequestURI)
-	params := make(map[string]string)
+	params := make(map[string]interface{})
 	if len(route.params) > 0 {
 		for i, match := range matches[1:] {
 			params[route.params[i]] = match
