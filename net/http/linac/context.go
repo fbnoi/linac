@@ -1,6 +1,7 @@
 package linac
 
 import (
+	xerror "linac/error"
 	"linac/net/http/linac/render"
 	"net/http"
 )
@@ -12,6 +13,8 @@ type Context struct {
 	Params  map[string]interface{}
 
 	abort bool
+
+	Err error
 }
 
 // Abort 终止http响应，并设置http code
@@ -25,24 +28,34 @@ func (ctx *Context) IsAbort() bool {
 	return ctx.abort
 }
 
-// JSON  返回json response
-func (ctx *Context) JSON(data interface{}, code int) {
+// JSON  将数据 json 编码到response中
+// 设置 content type 为 application/json; charset=utf-8
+func (ctx *Context) JSON(data interface{}, err error) {
+	ctx.Err = err
+	bErr := xerror.Cause(err)
 	ctx.writeContentType(render.ContentJSON)
 	render.Write(render.JSON{
-		Code: code,
+		Code: bErr.Code(),
 		Data: data,
 		Err:  "",
 	}, ctx.Writer)
 }
 
-// JSONMap  返回json response
-func (ctx *Context) JSONMap(data map[string]interface{}, code int) {
+// JSONMap  将数据 json 编码到response中
+// 设置 content type 为 application/json; charset=utf-8
+func (ctx *Context) JSONMap(data map[string]interface{}, err error) {
+	ctx.Err = err
+	bErr := xerror.Cause(err)
+	data["message"] = bErr.Message()
+	data["code"] = bErr.Code()
 	ctx.writeContentType(render.ContentJSON)
 	render.Write(render.JSONMap(data), ctx.Writer)
 }
 
-// String 返回 string response
-func (ctx *Context) String(str string) {
+// String 将字符串写入response body中
+// 设置 content type 为 text/plain; charset=utf-8
+func (ctx *Context) String(str string, err error) {
+	ctx.Err = err
 	ctx.writeContentType(render.ContentString)
 	render.Write(&render.String{
 		Content: str,
