@@ -1,7 +1,6 @@
 package render
 
 import (
-	"fmt"
 	"io"
 )
 
@@ -11,13 +10,14 @@ type IRender interface {
 }
 
 // Write 将 render 渲染到 io 中
-func Write(render IRender, w io.Writer) {
+func Write(render IRender, w io.Writer) error {
 	bs, err := render.Render()
 	if err != nil {
-		panic(fmt.Sprintf("render error: %s", err.Error()))
+		return err
 	}
 	_, err = w.Write(bs)
 	if err != nil {
-		panic(fmt.Sprintf("write to io error: %s", err.Error()))
+		return err
 	}
+	return nil
 }
