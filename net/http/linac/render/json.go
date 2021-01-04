@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	// ContextJSON content-type
-	ContextJSON = "application/json; charset=utf-8"
+	// ContentJSON content-type
+	ContentJSON = "application/json; charset=utf-8"
 )
 
 // JSON 返回json渲染，特定型

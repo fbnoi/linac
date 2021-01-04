@@ -3,8 +3,8 @@ package render
 import "linac"
 
 const (
-	// ContextString content-type
-	ContextString = "text/plain; charset=utf-8"
+	// ContentString content-type
+	ContentString = "text/plain; charset=utf-8"
 )
 
 // String string response

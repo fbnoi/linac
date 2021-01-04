@@ -27,11 +27,25 @@ func (ctx *Context) IsAbort() bool {
 
 // JSON  返回json response
 func (ctx *Context) JSON(data interface{}, code int) {
+	ctx.writeContentType(render.ContentJSON)
 	render.Write(&render.JSON{
 		Code: code,
 		Data: data,
 		Err:  "",
 	}, ctx.Writer)
+}
+
+// String 返回 string response
+func (ctx *Context) String(str string) {
+	ctx.writeContentType(render.ContentString)
+	render.Write(&render.String{
+		Content: str,
+	}, ctx.Writer)
+}
+
+func (ctx *Context) writeContentType(ctype string) {
+	header := ctx.Writer.Header()
+	header.Set("Content-Type", ctype)
 }
 
 // Handler http 请求处理
