@@ -1,6 +1,9 @@
 package linac
 
-import "net/http"
+import (
+	"linac/net/http/linac/render"
+	"net/http"
+)
 
 // Context http 请求上下文
 type Context struct {
@@ -20,6 +23,15 @@ func (ctx *Context) Abort(code int) {
 // IsAbort 返回context是否终止响应
 func (ctx *Context) IsAbort() bool {
 	return ctx.abort
+}
+
+// JSON  返回json response
+func (ctx *Context) JSON(data interface{}, code int) {
+	render.Write(&render.JSON{
+		Code: code,
+		Data: data,
+		Err:  "",
+	}, ctx.Writer)
 }
 
 // Handler http 请求处理
