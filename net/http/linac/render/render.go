@@ -7,6 +7,7 @@ import (
 // IRender render
 type IRender interface {
 	Render() ([]byte, error)
+	ContentType() string
 }
 
 // Write 将 render 渲染到 io 中

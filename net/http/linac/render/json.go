@@ -6,7 +6,7 @@ import (
 
 const (
 	// ContentJSON content-type
-	ContentJSON = "application/json; charset=utf-8"
+	_contentJSON = "application/json; charset=utf-8"
 )
 
 // JSON 返回json渲染，特定型
@@ -22,6 +22,11 @@ func (j JSON) Render() (content []byte, err error) {
 	return
 }
 
+// ContentType 返回 content type
+func (j JSON) ContentType() string {
+	return _contentJSON
+}
+
 // JSONMap 通用型
 type JSONMap map[string]interface{}
 
@@ -29,4 +34,9 @@ type JSONMap map[string]interface{}
 func (j JSONMap) Render() (content []byte, err error) {
 	content, err = xjson.Marshal(j)
 	return
+}
+
+// ContentType 返回 content type
+func (j JSONMap) ContentType() string {
+	return _contentJSON
 }

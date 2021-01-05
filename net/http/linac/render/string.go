@@ -4,7 +4,7 @@ import "linac"
 
 const (
 	// ContentString content-type
-	ContentString = "text/plain; charset=utf-8"
+	_contentString = "text/plain; charset=utf-8"
 )
 
 // String string response
@@ -13,6 +13,11 @@ type String struct {
 }
 
 // Render Render
-func (str *String) Render() (res []byte, err error) {
+func (str String) Render() (res []byte, err error) {
 	return linac.StringToBytes(str.Content), nil
+}
+
+// ContentType 返回 content type
+func (str String) ContentType() string {
+	return _contentString
 }

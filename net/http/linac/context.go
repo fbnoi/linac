@@ -28,17 +28,24 @@ func (ctx *Context) IsAbort() bool {
 	return ctx.abort
 }
 
+func (ctx *Context) render(r render.IRender, code int) {
+	ctx.Writer.WriteHeader(code)
+	ctx.writeContentType(r.ContentType())
+	if err := render.Write(r, ctx.Writer); err != nil {
+		ctx.Err = err
+	}
+}
+
 // JSON  将数据 json 编码到response中
 // 设置 content type 为 application/json; charset=utf-8
 func (ctx *Context) JSON(data interface{}, err error) {
 	ctx.Err = err
 	bErr := xerror.Cause(err)
-	ctx.writeContentType(render.ContentJSON)
-	render.Write(render.JSON{
+	ctx.render(render.JSON{
 		Code: bErr.Code(),
 		Data: data,
-		Err:  "",
-	}, ctx.Writer)
+		Err:  bErr.Message(),
+	}, http.StatusOK)
 }
 
 // JSONMap  将数据 json 编码到response中
@@ -48,18 +55,15 @@ func (ctx *Context) JSONMap(data map[string]interface{}, err error) {
 	bErr := xerror.Cause(err)
 	data["message"] = bErr.Message()
 	data["code"] = bErr.Code()
-	ctx.writeContentType(render.ContentJSON)
-	render.Write(render.JSONMap(data), ctx.Writer)
+	ctx.render(render.JSONMap(data), http.StatusOK)
 }
 
 // String 将字符串写入response body中
 // 设置 content type 为 text/plain; charset=utf-8
-func (ctx *Context) String(str string, err error) {
-	ctx.Err = err
-	ctx.writeContentType(render.ContentString)
-	render.Write(&render.String{
+func (ctx *Context) String(code int, str string) {
+	ctx.render(&render.String{
 		Content: str,
-	}, ctx.Writer)
+	}, code)
 }
 
 func (ctx *Context) writeContentType(ctype string) {
