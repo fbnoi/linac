@@ -18,7 +18,6 @@ func NewEngine() *Engine {
 // Engine http server engine
 type Engine struct {
 	*Router
-
 	server *atomic.Value
 }
 

@@ -37,6 +37,13 @@ func (group *RouteGroup) addRoute(path, method string, handler ...Handler) *Rout
 	return group
 }
 
+// Use 向 Group 中添加全局的handler
+// 该方法必须只用于添加中间件
+// NOTE: 该方法添加的中间件，只对调用了 Use 方法之后注册的路由有效，而对之前注册的路由无效
+func (group *RouteGroup) Use(handlers ...Handler) {
+	group.handlers = group.mergeHandlers(handlers...)
+}
+
 // Group 新建分组
 func (group *RouteGroup) Group(path string, register func(*RouteGroup) *RouteGroup, handlers ...Handler) {
 	path = group.absPath(path)
