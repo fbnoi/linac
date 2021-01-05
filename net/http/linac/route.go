@@ -1,7 +1,6 @@
 package linac
 
 import (
-	"net/http"
 	xpath "path"
 	"regexp"
 	"strings"
@@ -119,15 +118,8 @@ func (route *Route) handle(ctx *Context) {
 		}
 	}
 	ctx.Params = params
-	for i, handler := range route.handlers {
-		if ctx.IsAbort() {
-			return
-		}
-		if i == len(route.handlers) && ctx.Request.Method != route.method {
-			ctx.Abort(http.StatusMethodNotAllowed)
-		}
-		handler(ctx)
-	}
+	ctx.Handlers = route.handlers
+	ctx.Next()
 }
 
 // pattern 路由模式

@@ -8,16 +8,28 @@ import (
 
 // Context http 请求上下文
 type Context struct {
-	Writer  http.ResponseWriter
-	Request *http.Request
-	Params  map[string]interface{}
+	Writer   http.ResponseWriter
+	Request  *http.Request
+	Params   map[string]interface{}
+	Handlers []Handler
+	index    int
+	Err      error
 
 	abort bool
-
-	Err error
 }
 
-// Abort 终止http响应，并设置http code
+// Next 继续执行下一个handler
+// Note: 此方法应该只在中间件中调用
+func (ctx *Context) Next() {
+	for ; ctx.index < len(ctx.Handlers)-1; ctx.index++ {
+		if ctx.IsAbort() {
+			return
+		}
+		ctx.Handlers[ctx.index](ctx)
+	}
+}
+
+// Abort 停止继续使用handlers处理ctx，但不会停止当前的handler
 func (ctx *Context) Abort(code int) {
 	ctx.Writer.WriteHeader(code)
 	ctx.abort = true
