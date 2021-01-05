@@ -12,6 +12,7 @@ func NewEngine() *Engine {
 		server: &atomic.Value{},
 	}
 	engine.Router.engine = engine
+	engine.Use(Recovery())
 	return engine
 }
 
