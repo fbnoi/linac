@@ -37,6 +37,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	context := &Context{
 		Writer:  w,
 		Request: r,
+		index:   -1,
+		abort:   false,
 	}
 	if route, ok := router.metchRoute(context); ok {
 		route.handle(context)

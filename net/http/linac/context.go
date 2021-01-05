@@ -12,15 +12,16 @@ type Context struct {
 	Request  *http.Request
 	Params   map[string]interface{}
 	Handlers []Handler
-	index    int
 	Err      error
 
 	abort bool
+	index int
 }
 
 // Next 继续执行下一个handler
 // Note: 此方法应该只在中间件中调用
 func (ctx *Context) Next() {
+	ctx.index++
 	for ; ctx.index < len(ctx.Handlers)-1; ctx.index++ {
 		if ctx.IsAbort() {
 			return

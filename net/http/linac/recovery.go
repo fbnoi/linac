@@ -27,5 +27,6 @@ func Recovery() Handler {
 				c.Abort(500)
 			}
 		}()
+		c.Next()
 	}
 }
