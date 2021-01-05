@@ -2,6 +2,7 @@ package linac
 
 import (
 	"fmt"
+	"net/http"
 	"net/http/httputil"
 	"os"
 	"runtime"
@@ -24,7 +25,7 @@ func Recovery() Handler {
 				pl := fmt.Sprintf("http call panic: %s\n%v\n%s\n", string(rawReq), err, buf)
 				fmt.Fprintf(os.Stderr, pl)
 				log.Error(pl)
-				c.Abort(500)
+				c.Abort(http.StatusInternalServerError)
 			}
 		}()
 		c.Next()
