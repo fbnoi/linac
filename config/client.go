@@ -21,9 +21,9 @@ import (
 )
 
 var (
-	_codeOk          = 0
-	_codeModified    = -301
-	_codeNotModified = -201
+	_codeOk           = 0
+	_codeShouldUpdate = -301
+	_codeNoNeedUpdate = -201
 
 	_retryInterval        = time.Second
 	_httpTimeout          = time.Second * 60
@@ -56,7 +56,7 @@ type dVerResp struct {
 		Version int    `json:"version"`
 		Content string `json:"content"`
 		MD5     string `json:"md5"`
-	} `json:"ver"`
+	} `json:"data"`
 }
 
 type version struct {
@@ -220,7 +220,7 @@ func (c *Client) init() (err error) {
 		if err = c.synchro(v); err == nil {
 			return
 		}
-		fmt.Printf("retry times: %d, c.synchro(%d) error(%v)\n", v, i, err)
+		fmt.Printf("retry times: %d, c.synchro(%d) error(%v)\n", i, v, err)
 		time.Sleep(_retryInterval)
 	}
 	return
@@ -292,6 +292,7 @@ func (c *Client) checkVersion(reqVer *version) (ver *version, err error) {
 		resp *http.Response
 		rbs  []byte
 	)
+	ver = &version{ver: _unknownVersion}
 	if url, err = c.makeURL(_apiCheck, reqVer); err != nil {
 		err = fmt.Errorf("checkVersion(): make url error:" + err.Error())
 		return
@@ -321,16 +322,16 @@ func (c *Client) checkVersion(reqVer *version) (ver *version, err error) {
 	}
 
 	switch v.Code {
-	case _codeModified:
+	case _codeShouldUpdate:
 		if v.Data == nil {
-			err = fmt.Errorf("checkVersion(): response error: %v", v)
+			err = fmt.Errorf("checkVersion(): response error: %v, data nil", v)
 			return
 		}
 		ver = v.Data
-	case _codeNotModified:
+	case _codeNoNeedUpdate:
 		ver = reqVer
 	default:
-		err = fmt.Errorf("checkVersion(): response error: %v", v)
+		err = fmt.Errorf("checkVersion(): response error: %v, unknown code", v)
 	}
 	return
 }
@@ -344,7 +345,7 @@ func (c *Client) download(reqVer *version) (confs []byte, err error) {
 		rbs  []byte
 	)
 
-	if url, err = c.makeURL(_apiCheck, reqVer); err != nil {
+	if url, err = c.makeURL(_apiGet, reqVer); err != nil {
 		err = fmt.Errorf("download(): make url error:" + err.Error())
 		return
 	}
@@ -371,7 +372,7 @@ func (c *Client) download(reqVer *version) (confs []byte, err error) {
 	switch v.Code {
 	case _codeOk:
 		if v.Data == nil {
-			err = fmt.Errorf("download(): response error: %v", v)
+			err = fmt.Errorf("download(): response error: %v, data nil", v)
 			return
 		}
 		mh := md5.Sum(linac.StringToBytes(v.Data.Content))
@@ -381,7 +382,7 @@ func (c *Client) download(reqVer *version) (confs []byte, err error) {
 		}
 		confs = linac.StringToBytes(v.Data.Content)
 	default:
-		err = fmt.Errorf("download(): response error: %v", v)
+		err = fmt.Errorf("download(): response error: %v, unknown code", v)
 	}
 	return
 }
