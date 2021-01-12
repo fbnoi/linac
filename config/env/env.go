@@ -31,8 +31,10 @@ var (
 	DeployEnv string
 	// IP 服务IP
 	IP string
-	// AppID 服务ip
+	// AppID 服务ID
 	AppID string
+	// AppID 服务名
+	AppName string
 )
 
 // app 默认值
@@ -60,7 +62,7 @@ func addFlag(fs *flag.FlagSet) {
 	fs.StringVar(&Zone, "zone", defaultString("ZONE", _defaultZone), "avaliable zone. or use ZONE env variable, value: wh001/wh002 etc.")
 	fs.StringVar(&DeployEnv, "deploy.env", defaultString("DEPLOY_ENV", _defaultDeployEnv), "deploy env. or use DEPLOY_ENV env variable, value: dev/test/prod etc.")
 	fs.StringVar(&AppID, "appid", os.Getenv("APP_ID"), "appid is global unique application id, register by service tree. or use APP_ID env variable.")
-
+	fs.StringVar(&AppName, "appname", os.Getenv("APP_NAME"), "AppName is the service name.")
 	// app
 	fs.StringVar(&HTTPPort, "http.port", defaultString("DISCOVERY_HTTP_PORT", _defaultHTTPPort), "app listen http port, default: 8080")
 }

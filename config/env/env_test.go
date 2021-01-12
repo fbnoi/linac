@@ -34,6 +34,7 @@ func TestEnv(t *testing.T) {
 		{"zone", "ZONE", _defaultZone, &Zone},
 		{"deploy.env", "DEPLOY_ENV", _defaultDeployEnv, &DeployEnv},
 		{"appid", "APP_ID", "", &AppID},
+		{"appname", "APP_Name", "", &AppName},
 		{"http.port", "DISCOVERY_HTTP_PORT", _defaultHTTPPort, &HTTPPort},
 	}
 	for _, tc := range cases {
