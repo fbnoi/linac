@@ -86,21 +86,21 @@ func (router *Router) handleContext(ctx *Context) {
 
 // metchRoute 匹配context路由并返回
 func (router *Router) metchRoute(ctx *Context) (route *Route, ok bool) {
-	r := ctx.Request
+	url := ctx.Request.URL
 	for _, cond := range router.RouteGroup.routes {
-		if !cond.regex.MatchString(r.RequestURI) {
+		if !cond.regex.MatchString(url.Path) {
 			continue
 		}
-		matches := cond.regex.FindStringSubmatch(r.RequestURI)
+		matches := cond.regex.FindStringSubmatch(url.Path)
 		//再次检测是否匹配
-		if len(matches[0]) != len(r.RequestURI) {
+		if len(matches[0]) != len(url.Path) {
+			continue
+		}
+		// 如果路由模式匹配，检测 http 请求方法
+		if ctx.Request.Method != cond.method {
 			continue
 		}
 		route, ok = cond, true
-		// 如果路由模式匹配，并且http方法相同，即刻返回
-		if r.Method == route.method {
-			return
-		}
 	}
 	return
 }

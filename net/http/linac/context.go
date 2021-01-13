@@ -22,6 +22,40 @@ type Context struct {
 	index int
 }
 
+// Get 获取GET请求参数
+// 返回路由参数以及query值，重名是优先路由参数
+func (ctx *Context) Get(name string) (value interface{}) {
+	value, ok := ctx.Params[name]
+	if ok {
+		return
+	} else if value = ctx.Request.URL.Query().Get(name); value != nil {
+		return
+	}
+	return
+}
+
+// Post 获取POST请求参数
+func (ctx *Context) Post(name string) (value interface{}) {
+	post := ctx.Request.PostForm
+	if values, ok := post[name]; ok {
+		if len(values) == 1 {
+			value = values[0]
+		} else {
+			value = values
+		}
+	}
+	return
+}
+
+// Input 获取请求参数，不管是post还是get
+func (ctx *Context) Input(name string) (value interface{}) {
+	value = ctx.Get(name)
+	if value == "" {
+		value = ctx.Post(name)
+	}
+	return
+}
+
 // Next 继续执行下一个handler
 // Note: 此方法应该只在中间件中调用
 func (ctx *Context) Next() {

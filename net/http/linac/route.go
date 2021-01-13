@@ -165,8 +165,8 @@ func (route *Route) GetConfig() (config *RouteConfig, ok bool) {
 // 1.解析路由参数
 // 2.调用 Handler 处理 context
 func (route *Route) handle(ctx *Context) {
-	r := ctx.Request
-	matches := route.regex.FindStringSubmatch(r.RequestURI)
+	url := ctx.Request.URL
+	matches := route.regex.FindStringSubmatch(url.Path)
 	params := make(map[string]interface{})
 	if len(route.params) > 0 {
 		for i, match := range matches[1:] {
@@ -194,11 +194,10 @@ func parseURI(pattern string) (*regexp.Regexp, map[int]string) {
 				part = part[:i]
 			}
 			parts[index] = expr
-			params[j] = part
+			params[j] = part[1:]
 			j++
 		}
 	}
-
 	pattern = strings.Join(parts, "/")
 	regex, regexErr := regexp.Compile(pattern)
 	if regexErr != nil {
