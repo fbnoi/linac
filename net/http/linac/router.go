@@ -2,6 +2,7 @@ package linac
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -46,22 +47,23 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // handleContext 处理context, 添加超时
 func (router *Router) handleContext(ctx *Context) {
-	var (
-		cancel func()
-		tm     time.Duration
-	)
-	conf, ok := router.engine.GetConfig()
-	if ok {
-		tm = time.Duration(conf.Timeout)
-	}
-	if tm > 0 {
-		ctx.Context, cancel = context.WithTimeout(context.Background(), tm)
-	} else {
-		ctx.Context, cancel = context.WithCancel(context.Background())
-	}
-
-	defer cancel()
 	if route, ok := router.metchRoute(ctx); ok {
+		var (
+			cancel func()
+			tm     time.Duration
+		)
+		conf := router.engine.GetConfig()
+		tm = conf.Timeout
+		if conf, ok := route.GetConfig(); ok && conf.Timeout < tm {
+			tm = conf.Timeout
+		}
+		c := context.Background()
+		if tm > 0 {
+			ctx.Context, cancel = context.WithTimeout(c, tm)
+		} else {
+			ctx.Context, cancel = context.WithCancel(c)
+		}
+		defer cancel()
 		route.handle(ctx)
 	} else {
 		router.getNotFoundHandler()(ctx)
@@ -91,5 +93,6 @@ func (router *Router) metchRoute(ctx *Context) (route *Route, ok bool) {
 
 //默认 not found handler，返回404状态码
 func defaultNotFoundHandler(context *Context) {
-	context.Abort(http.StatusNotFound)
+	context.String(http.StatusNotFound, fmt.Sprintf("no route found for %s:%s", context.Request.Method, context.Request.URL))
+	// context.Abort(http.StatusNotFound)
 }

@@ -2,6 +2,7 @@ package linac
 
 import (
 	"fmt"
+	"log"
 	xpath "path"
 	"regexp"
 	"strings"
@@ -18,6 +19,7 @@ func newRoute(pattern, method, name string, handler ...Handler) *Route {
 		params:   params,
 		method:   method,
 		handlers: handler,
+		config:   &atomic.Value{},
 	}
 }
 
@@ -37,11 +39,15 @@ func (group *RouteGroup) addRoute(path, method, name string, handler ...Handler)
 	name = group.fullName(name)
 	path = group.absPath(path)
 	handler = group.mergeHandlers(handler...)
+	if group.routes == nil {
+		group.routes = make(map[string]*Route)
+	}
 	if _, ok := group.GetRoute(name); ok {
 		panic(fmt.Errorf("add route error, name '%s' already exist", name))
 	}
 	route = newRoute(path, method, name, handler...)
 	group.routes[name] = route
+	log.Printf("add route: path=%s, method=%s, name=%s", path, method, name)
 	return
 }
 

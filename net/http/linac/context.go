@@ -2,6 +2,7 @@ package linac
 
 import (
 	"context"
+	"fmt"
 	xerror "linac/error"
 	"linac/net/http/linac/render"
 	"net/http"
@@ -15,7 +16,7 @@ type Context struct {
 	Request  *http.Request
 	Params   map[string]interface{}
 	Handlers []Handler
-	Err      error
+	Error    error
 
 	abort bool
 	index int
@@ -48,14 +49,14 @@ func (ctx *Context) render(r render.IRender, code int) {
 	ctx.Writer.WriteHeader(code)
 	ctx.writeContentType(r.ContentType())
 	if err := render.Write(r, ctx.Writer); err != nil {
-		ctx.Err = err
+		ctx.Error = err
 	}
 }
 
 // JSON  将数据 json 编码到response中
 // 设置 content type 为 application/json; charset=utf-8
 func (ctx *Context) JSON(data interface{}, err error) {
-	ctx.Err = err
+	ctx.Error = err
 	bErr := xerror.Cause(err)
 	ctx.render(render.JSON{
 		Code: bErr.Code(),
@@ -67,7 +68,7 @@ func (ctx *Context) JSON(data interface{}, err error) {
 // JSONMap  将数据 json 编码到response中
 // 设置 content type 为 application/json; charset=utf-8
 func (ctx *Context) JSONMap(data map[string]interface{}, err error) {
-	ctx.Err = err
+	ctx.Error = err
 	bErr := xerror.Cause(err)
 	data["message"] = bErr.Message()
 	data["code"] = bErr.Code()
@@ -76,9 +77,9 @@ func (ctx *Context) JSONMap(data map[string]interface{}, err error) {
 
 // String 将字符串写入response body中
 // 设置 content type 为 text/plain; charset=utf-8
-func (ctx *Context) String(code int, str string) {
+func (ctx *Context) String(code int, sfmt string, value ...interface{}) {
 	ctx.render(&render.String{
-		Content: str,
+		Content: fmt.Sprintf(sfmt, value...),
 	}, code)
 }
 
