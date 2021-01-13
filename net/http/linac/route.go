@@ -135,8 +135,8 @@ func (group *RouteGroup) mergeHandlers(handlers ...Handler) []Handler {
 // RouteConfig 路由配置
 // 为路由定制配置选项
 type RouteConfig struct {
-	Timeout   time.Duration
-	MaxMemery int
+	Timeout        time.Duration
+	MaxRequestBody int64
 }
 
 // Route model

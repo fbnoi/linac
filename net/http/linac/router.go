@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -49,14 +50,27 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (router *Router) handleContext(ctx *Context) {
 	if route, ok := router.metchRoute(ctx); ok {
 		var (
-			cancel func()
-			tm     time.Duration
+			cancel         func()
+			tm             time.Duration
+			maxRequestBody int64
 		)
 		conf := router.engine.GetConfig()
 		tm = conf.Timeout
+		maxRequestBody = conf.MaxRequestBody
 		if conf, ok := route.GetConfig(); ok {
 			tm = conf.Timeout
+			maxRequestBody = conf.MaxRequestBody
 		}
+
+		req := ctx.Request
+		ctype := req.Header.Get("Content-Type")
+		switch {
+		case strings.Contains(ctype, "multipart/form-data"):
+			req.ParseMultipartForm(maxRequestBody)
+		default:
+			req.ParseForm()
+		}
+
 		c := context.Background()
 		if tm > 0 {
 			ctx.Context, cancel = context.WithTimeout(c, tm)

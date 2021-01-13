@@ -9,19 +9,21 @@ import (
 
 var (
 	_defaultConfig = &ServerConfig{
-		Address:      ":8089",
-		Timeout:      time.Second * time.Duration(2),
-		ReadTimeout:  time.Second * time.Duration(10),
-		WriteTimeout: time.Second * time.Duration(30),
+		Address:        ":8089",
+		Timeout:        time.Second * time.Duration(2),
+		ReadTimeout:    time.Second * time.Duration(10),
+		WriteTimeout:   time.Second * time.Duration(30),
+		MaxRequestBody: 1 << 20, // 1M
 	}
 )
 
 // ServerConfig 服务器配置
 type ServerConfig struct {
-	Address      string
-	Timeout      time.Duration
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	Address        string
+	Timeout        time.Duration
+	ReadTimeout    time.Duration
+	WriteTimeout   time.Duration
+	MaxRequestBody int64
 }
 
 // NewEngine 返回一个新的 http server engine
