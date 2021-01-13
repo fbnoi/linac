@@ -1,15 +1,19 @@
 package linac
 
 import (
+	"fmt"
 	xpath "path"
 	"regexp"
 	"strings"
+	"sync/atomic"
+	"time"
 )
 
 // newRoute 添加路由处理方法
-func newRoute(pattern, method string, handler ...Handler) *Route {
+func newRoute(pattern, method, name string, handler ...Handler) *Route {
 	regex, params := parseURI(pattern)
 	return &Route{
+		name:     name,
 		regex:    regex,
 		params:   params,
 		method:   method,
@@ -19,21 +23,26 @@ func newRoute(pattern, method string, handler ...Handler) *Route {
 
 // RouteGroup Route集合
 type RouteGroup struct {
+	name     string
 	path     string
 	handlers []Handler
-	routes   []*Route
+	routes   map[string]*Route
 }
 
 // AddRoute 向路由器中添加路由
-func (group *RouteGroup) addRoute(path, method string, handler ...Handler) *RouteGroup {
+func (group *RouteGroup) addRoute(path, method, name string, handler ...Handler) (route *Route) {
 	if path[0] != '/' {
 		panic("pattern must start with '/'")
 	}
+	name = group.fullName(name)
 	path = group.absPath(path)
 	handler = group.mergeHandlers(handler...)
-	group.routes = append(group.routes, newRoute(path, method, handler...))
-
-	return group
+	if _, ok := group.GetRoute(name); ok {
+		panic(fmt.Errorf("add route error, name '%s' already exist", name))
+	}
+	route = newRoute(path, method, name, handler...)
+	group.routes[name] = route
+	return
 }
 
 // Use 向 Group 中添加全局的handler
@@ -44,41 +53,54 @@ func (group *RouteGroup) Use(handlers ...Handler) {
 }
 
 // Group 新建分组
-func (group *RouteGroup) Group(path string, register func(*RouteGroup) *RouteGroup, handlers ...Handler) {
+func (group *RouteGroup) Group(path, name string, register func(*RouteGroup) *RouteGroup, handlers ...Handler) {
+	name = group.fullName(name)
 	path = group.absPath(path)
 	handlers = group.mergeHandlers(handlers...)
 	newGroup := &RouteGroup{
+		name:     name,
 		path:     path,
 		handlers: handlers,
-		routes:   []*Route{},
+		routes:   make(map[string]*Route),
 	}
 	newGroup = register(newGroup)
-	group.routes = append(group.routes, newGroup.routes...)
+	for name, route := range newGroup.routes {
+		if _, ok := group.GetRoute(name); ok {
+			panic(fmt.Errorf("add route error, name '%s' already exist", name))
+		}
+		group.routes[name] = route
+	}
 }
 
 // GET 为一个路由注册一个GET方法
-func (group *RouteGroup) GET(path string, handler ...Handler) *RouteGroup {
-	return group.addRoute(path, "GET", handler...)
+func (group *RouteGroup) GET(path, name string, handler ...Handler) *Route {
+	return group.addRoute(path, "GET", name, handler...)
 }
 
 // POST 为一个路由注册一个POST方法
-func (group *RouteGroup) POST(path string, handler ...Handler) *RouteGroup {
-	return group.addRoute(path, "POST", handler...)
+func (group *RouteGroup) POST(path, name string, handler ...Handler) *Route {
+	return group.addRoute(path, "POST", name, handler...)
 }
 
 // PUT 为一个路由注册一个PUT方法
-func (group *RouteGroup) PUT(path string, handler ...Handler) *RouteGroup {
-	return group.addRoute(path, "PUT", handler...)
+func (group *RouteGroup) PUT(path, name string, handler ...Handler) *Route {
+	return group.addRoute(path, "PUT", name, handler...)
 }
 
 // DELETE 为一个路由注册一个DELETE方法
-func (group *RouteGroup) DELETE(path string, handler ...Handler) *RouteGroup {
-	return group.addRoute(path, "DELETE", handler...)
+func (group *RouteGroup) DELETE(path, name string, handler ...Handler) *Route {
+	return group.addRoute(path, "DELETE", name, handler...)
 }
 
 // HEAD 为一个路由注册一个HEAD方法
-func (group *RouteGroup) HEAD(path string, handler ...Handler) *RouteGroup {
-	return group.addRoute(path, "HEAD", handler...)
+func (group *RouteGroup) HEAD(path, name string, handler ...Handler) *Route {
+	return group.addRoute(path, "HEAD", name, handler...)
+}
+
+//GetRoute 获取route
+func (group *RouteGroup) GetRoute(name string) (route *Route, ok bool) {
+	route, ok = group.routes[name]
+	return
 }
 
 func (group *RouteGroup) absPath(path string) string {
@@ -93,16 +115,44 @@ func (group *RouteGroup) absPath(path string) string {
 	return finalPath
 }
 
+func (group *RouteGroup) fullName(name string) string {
+	if group.name == "" {
+		return name
+	}
+	return group.name + "." + name
+}
+
 func (group *RouteGroup) mergeHandlers(handlers ...Handler) []Handler {
 	return append(group.handlers, handlers...)
 }
 
+// RouteConfig 路由配置
+// 为路由定制配置选项
+type RouteConfig struct {
+	Timeout   time.Duration
+	MaxMemery int
+}
+
 // Route model
 type Route struct {
+	name     string
 	regex    *regexp.Regexp
 	method   string
 	params   map[int]string
 	handlers []Handler
+
+	config *atomic.Value
+}
+
+// SetConfig 为路由添加特定的配置
+func (route *Route) SetConfig(config *RouteConfig) {
+	route.config.Store(config)
+}
+
+// GetConfig 获取路由配置
+func (route *Route) GetConfig() (config *RouteConfig, ok bool) {
+	config, ok = route.config.Load().(*RouteConfig)
+	return
 }
 
 // handle 处理http请求

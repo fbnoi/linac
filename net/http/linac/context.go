@@ -1,6 +1,7 @@
 package linac
 
 import (
+	"context"
 	xerror "linac/error"
 	"linac/net/http/linac/render"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 
 // Context http 请求上下文
 type Context struct {
+	context.Context
+
 	Writer   http.ResponseWriter
 	Request  *http.Request
 	Params   map[string]interface{}
