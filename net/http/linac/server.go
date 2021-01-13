@@ -10,7 +10,7 @@ import (
 var (
 	_defaultConfig = &ServerConfig{
 		Address:      ":8089",
-		Timeout:      time.Second * time.Duration(5),
+		Timeout:      time.Second * time.Duration(2),
 		ReadTimeout:  time.Second * time.Duration(10),
 		WriteTimeout: time.Second * time.Duration(30),
 	}

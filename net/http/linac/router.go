@@ -54,7 +54,7 @@ func (router *Router) handleContext(ctx *Context) {
 		)
 		conf := router.engine.GetConfig()
 		tm = conf.Timeout
-		if conf, ok := route.GetConfig(); ok && conf.Timeout < tm {
+		if conf, ok := route.GetConfig(); ok {
 			tm = conf.Timeout
 		}
 		c := context.Background()
@@ -94,5 +94,4 @@ func (router *Router) metchRoute(ctx *Context) (route *Route, ok bool) {
 //默认 not found handler，返回404状态码
 func defaultNotFoundHandler(context *Context) {
 	context.String(http.StatusNotFound, fmt.Sprintf("no route found for %s:%s", context.Request.Method, context.Request.URL))
-	// context.Abort(http.StatusNotFound)
 }
