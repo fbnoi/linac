@@ -50,7 +50,7 @@ func (ctx *Context) Post(name string) (value interface{}) {
 // Input 获取请求参数，不管是post还是get
 func (ctx *Context) Input(name string) (value interface{}) {
 	value = ctx.Get(name)
-	if value == "" {
+	if value == nil {
 		value = ctx.Post(name)
 	}
 	return
