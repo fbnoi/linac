@@ -3,6 +3,9 @@ package log
 import (
 	"fmt"
 	"linac"
+	"runtime"
+	"strconv"
+	"strings"
 )
 
 // 日志等级
@@ -27,7 +30,7 @@ const (
 	_appid      = "i"
 	_env        = "e"
 	_zone       = "z"
-	_FullSourse = "S"
+	_fullSourse = "S"
 	_finSourse  = "s"
 )
 
@@ -72,6 +75,8 @@ type logger struct {
 	level   int
 	render  *render
 	context *context
+
+	attach map[string]interface{}
 }
 
 // 写入日志
@@ -86,9 +91,55 @@ func (l *logger) log(level int, str string) {
 	}
 }
 
+// Attach 添加自定义日志选项
+// 添加的键值对在每次写入日志时，都会携带写入日志
+func (l *logger) Attach(key string, value interface{}) {
+	if l.attach == nil {
+		l.attach = make(map[string]interface{})
+	}
+	l.attach[key] = value
+}
+
+func (l *logger) SetLevel(level int) error {
+	if level > LevelOff || level < LevelAll {
+		return fmt.Errorf("SetLevel(%v) error, unknown log level: %v", level, level)
+	}
+	l.level = level
+	return nil
+}
+
 func (l *logger) Print(sfmt string, value ...interface{}) {
 	str := fmt.Sprintf(sfmt, value...)
+	str = l.wrapper(str)
 	l.driver.Write(linac.StringToBytes(str))
+}
+
+func (l *logger) wrapper(message interface{}) string {
+	d := make(map[string]interface{})
+	d[_longTime] = struct{}{}
+	d[_shortTime] = struct{}{}
+	d[_longDate] = struct{}{}
+	d[_shortDate] = struct{}{}
+	d[_level] = l.level
+	d[_appid] = l.context.AppID
+	d[_env] = l.context.DeployEnv
+	d[_zone] = l.context.Zone
+	m := l.attach
+	m["msg"] = message
+	d[_message] = m
+	full, fin, line := l.sourceFile()
+	d[_fullSourse] = full + ":" + strconv.Itoa(line)
+	d[_finSourse] = fin + ":" + strconv.Itoa(line)
+	return l.render.foramt(d)
+}
+
+func (l *logger) sourceFile() (full, fin string, line int) {
+	full, line, ok := fileTrace(3)
+	if ok {
+		arrFile := strings.Split("/", full)
+		fin = arrFile[len(arrFile)-1]
+	}
+	return
 }
 
 // SetFormat
@@ -106,4 +157,9 @@ func (l *logger) Print(sfmt string, value ...interface{}) {
 // %s final file name element and line number: d.go:23
 func (l *logger) SetFormat(format string) {
 	l.render.parse(format)
+}
+
+func fileTrace(dep int) (file string, line int, ok bool) {
+	_, file, line, ok = runtime.Caller(dep)
+	return
 }

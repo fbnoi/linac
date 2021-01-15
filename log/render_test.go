@@ -1,6 +1,7 @@
 package log
 
 import (
+	"bytes"
 	"testing"
 	"time"
 )
@@ -50,13 +51,18 @@ func TestParseShortDate(t *testing.T) {
 }
 
 func TestDefaultFormatFuncFactory(t *testing.T) {
-	r := &render{}
-	r.parse("%g")
-	d := map[string]interface{}{}
-	l := "%g"
-	fl := r.foramt(d)
-	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+	str := "[12345 45567]"
+	var sli []func(map[string]interface{}) string
+	for i := 0; i < len(str); i++ {
+		f := defaultFormatFuncFactory(string(str[i]))
+		sli = append(sli, f)
+	}
+	var buf bytes.Buffer
+	for _, fun := range sli {
+		buf.WriteString(fun(map[string]interface{}{}))
+	}
+	if str != buf.String() {
+		t.Errorf("short date error, expected %s, get %s \n", str, buf.String())
 	}
 }
 
