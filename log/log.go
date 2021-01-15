@@ -32,7 +32,8 @@ const (
 )
 
 var (
-	_mapLevel = map[int]string{
+	_defaultFormat = "[%D %T][%i.%e][%S][%L]%M"
+	_mapLevel      = map[int]string{
 		LevelDebug:   "DEBUG",
 		LevelInfo:    "INFO",
 		LevelWarning: "WARNING",

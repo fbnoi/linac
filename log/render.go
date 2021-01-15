@@ -1,6 +1,7 @@
 package log
 
 import (
+	"bytes"
 	"fmt"
 	"linac"
 	"strings"
@@ -8,64 +9,89 @@ import (
 )
 
 var (
-	_suportFormet  = []string{"T", "t", "D", "d", "L", "M", "f", "e", "z", "i", "S", "s"}
-	_defaultFormat = "[%D %T][%i.%e][%S][%L]%M"
 	_mapFormetFunc = map[string]func(map[string]interface{}) string{
 		_longTime:   longTime,
 		_shortTime:  shortTime,
 		_longDate:   longDate,
 		_shortDate:  shortDate,
-		_level:      keyFactory("L"),
-		_function:   keyFactory("f"),
-		_env:        keyFactory("e"),
-		_zone:       keyFactory("z"),
-		_appid:      keyFactory("i"),
-		_FullSourse: keyFactory("S"),
-		_finSourse:  keyFactory("s"),
+		_level:      keyFormatFuncFactory(_level),
+		_function:   keyFormatFuncFactory(_function),
+		_env:        keyFormatFuncFactory(_env),
+		_zone:       keyFormatFuncFactory(_zone),
+		_appid:      keyFormatFuncFactory(_appid),
+		_FullSourse: keyFormatFuncFactory(_FullSourse),
+		_finSourse:  keyFormatFuncFactory(_finSourse),
 		_message:    message,
 	}
 )
 
 type render struct {
-	sli map[string]interface{}
+	sli []func(map[string]interface{}) string
+}
+
+func (render *render) foramt(d map[string]interface{}) string {
+	var buf bytes.Buffer
+	for _, f := range render.sli {
+		buf.WriteString(f(d))
+	}
+	return buf.String()
 }
 
 func (render *render) parse(format string) {
-	if render.sli == nil {
-		render.sli = make(map[string]interface{})
-	}
-	var bs = make([]byte, 1)
+
+	var bs []byte
 	for i := 0; i < len(format); i++ {
-		b := format[i]
-		if b != '%' {
+		if format[i] != '%' {
+			bs = append(bs, format[i])
 			continue
 		}
-		bs = append(bs, b)
-		k := linac.BytesToString(bs)
-		if fun, ok := _mapFormetFunc[k]; ok {
-			render.sli[k] = fun
+		if i+1 >= len(format) {
+			bs = append(bs, format[i])
+			continue
 		}
+		f, ok := _mapFormetFunc[format[i+1:i+2]]
+		if !ok {
+			bs = append(bs, format[i])
+			continue
+		}
+		i++
+		if len(bs) > 0 {
+			t := linac.BytesToString(bs)
+			render.sli = append(render.sli, defaultFormatFuncFactory(t))
+			bs = bs[:0]
+		}
+		render.sli = append(render.sli, f)
+	}
+	if len(bs) > 0 {
+		t := linac.BytesToString(bs)
+		render.sli = append(render.sli, defaultFormatFuncFactory(t))
 		bs = bs[:0]
 	}
 }
 
 func longTime(map[string]interface{}) string {
-	return time.Now().Format("00:00:00.000")
+	return time.Now().Format("15:04:05.000")
 }
 
 func shortTime(map[string]interface{}) string {
-	return time.Now().Format("00:00:00")
+	return time.Now().Format("15:04:05")
 }
 
 func longDate(map[string]interface{}) string {
-	return time.Now().Format("2020/01/01")
+	return time.Now().Format("2006/01/02")
 }
 
 func shortDate(map[string]interface{}) string {
-	return time.Now().Format("01/01")
+	return time.Now().Format("01/02")
 }
 
-func keyFactory(key string) func(map[string]interface{}) string {
+func defaultFormatFuncFactory(text string) func(map[string]interface{}) string {
+	return func(d map[string]interface{}) string {
+		return text
+	}
+}
+
+func keyFormatFuncFactory(key string) func(map[string]interface{}) string {
 	return func(d map[string]interface{}) string {
 		if v, ok := d[key]; ok {
 			if s, ok := v.(string); ok {
@@ -78,15 +104,15 @@ func keyFactory(key string) func(map[string]interface{}) string {
 }
 
 func message(d map[string]interface{}) string {
-	var m string
 	var s []string
-	for k, v := range d {
-		if k == _message {
-			m = fmt.Sprint(v)
-			continue
+	if m, ok := d[_message]; ok {
+		if mv, ok := m.(map[string]interface{}); ok {
+			for k, v := range mv {
+				s = append(s, fmt.Sprintf("%s=%v", k, v))
+			}
+		} else {
+			s = append(s, fmt.Sprint(m))
 		}
-		s = append(s, fmt.Sprintf("%s=%v", k, v))
 	}
-	s = append(s, m)
 	return strings.Join(s, " ")
 }
