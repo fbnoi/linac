@@ -62,7 +62,7 @@ func TestDefaultFormatFuncFactory(t *testing.T) {
 		buf.WriteString(fun(map[string]interface{}{}))
 	}
 	if str != buf.String() {
-		t.Errorf("short date error, expected %s, get %s \n", str, buf.String())
+		t.Errorf("default func error, expected %s, get %s \n", str, buf.String())
 	}
 }
 
@@ -75,7 +75,7 @@ func TestLevel(t *testing.T) {
 	l := "DEBUG"
 	fl := r.foramt(d)
 	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+		t.Errorf("log level error, expected %s, get %s \n", l, fl)
 	}
 }
 
@@ -89,7 +89,7 @@ func TestMessage(t *testing.T) {
 	l := "test"
 	fl := r.foramt(d)
 	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+		t.Errorf("message error, expected %s, get %s \n", l, fl)
 	}
 }
 
@@ -105,7 +105,7 @@ func TestMessageMap(t *testing.T) {
 	l := "foo=bar"
 	fl := r.foramt(d)
 	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+		t.Errorf("message map error, expected %s, get %s \n", l, fl)
 	}
 }
 
@@ -118,7 +118,7 @@ func TestFunc(t *testing.T) {
 	l := "func"
 	fl := r.foramt(d)
 	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+		t.Errorf("function error, expected %s, get %s \n", l, fl)
 	}
 }
 
@@ -131,7 +131,7 @@ func TestAppId(t *testing.T) {
 	l := "appid"
 	fl := r.foramt(d)
 	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+		t.Errorf("appid error, expected %s, get %s \n", l, fl)
 	}
 }
 
@@ -144,7 +144,7 @@ func TestEnv(t *testing.T) {
 	l := "dev"
 	fl := r.foramt(d)
 	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+		t.Errorf("env error, expected %s, get %s \n", l, fl)
 	}
 }
 
@@ -157,7 +157,7 @@ func TestZone(t *testing.T) {
 	l := "wh01"
 	fl := r.foramt(d)
 	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+		t.Errorf("zone error, expected %s, get %s \n", l, fl)
 	}
 }
 
@@ -170,7 +170,7 @@ func TestFullSource(t *testing.T) {
 	l := "/dev/sss.go:80"
 	fl := r.foramt(d)
 	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+		t.Errorf("full source error, expected %s, get %s \n", l, fl)
 	}
 }
 
@@ -183,6 +183,6 @@ func TestFinSource(t *testing.T) {
 	l := "sss.go:80"
 	fl := r.foramt(d)
 	if l != fl {
-		t.Errorf("short date error, expected %s, get %s \n", l, fl)
+		t.Errorf("fin source error, expected %s, get %s \n", l, fl)
 	}
 }

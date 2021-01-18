@@ -9,8 +9,7 @@ import (
 
 // 日志等级
 const (
-	LevelAll = iota
-	LevelDebug
+	LevelDebug = iota
 	LevelInfo
 	LevelWarning
 	LevelError
@@ -46,7 +45,7 @@ var (
 
 // Driver 日志驱动接口
 type Driver interface {
-	Write([]byte) error
+	Write([]byte, int) error
 }
 
 // context 日志上下文
@@ -99,8 +98,9 @@ func (l *logger) Attach(key string, value interface{}) {
 	l.attach[key] = value
 }
 
+// SetLevel 设置日志等级
 func (l *logger) SetLevel(level int) error {
-	if level > LevelOff || level < LevelAll {
+	if level > LevelOff || level < LevelDebug {
 		return fmt.Errorf("SetLevel(%v) error, unknown log level: %v", level, level)
 	}
 	l.level = level
@@ -110,7 +110,7 @@ func (l *logger) SetLevel(level int) error {
 func (l *logger) Print(sfmt string, value ...interface{}) {
 	str := fmt.Sprintf(sfmt, value...)
 	str = l.wrapper(str)
-	l.driver.Write(linac.StringToBytes(str))
+	l.driver.Write(linac.StringToBytes(str), l.level)
 }
 
 func (l *logger) wrapper(message interface{}) string {
