@@ -3,9 +3,15 @@ package log
 import (
 	"bytes"
 	"fmt"
+	"path"
+	"runtime"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+var funcMap sync.Map
 
 var (
 	_mapFormetFunc = map[string]func(map[string]interface{}) string{
@@ -14,12 +20,12 @@ var (
 		_longDate:   longDate,
 		_shortDate:  shortDate,
 		_level:      keyFormatFuncFactory(_level),
-		_function:   keyFormatFuncFactory(_function),
 		_env:        keyFormatFuncFactory(_env),
 		_zone:       keyFormatFuncFactory(_zone),
 		_appid:      keyFormatFuncFactory(_appid),
-		_fullSourse: keyFormatFuncFactory(_fullSourse),
-		_finSourse:  keyFormatFuncFactory(_finSourse),
+		_fullSourse: fullSource,
+		_finSourse:  finSource,
+		_function:   funcName,
 		_message:    message,
 	}
 )
@@ -83,6 +89,32 @@ func longDate(map[string]interface{}) string {
 
 func shortDate(map[string]interface{}) string {
 	return time.Now().Format("01/02")
+}
+
+func fullSource(map[string]interface{}) string {
+	if _, file, line, ok := runtime.Caller(3); ok {
+		return fmt.Sprintf("%s:%d", file, line)
+	}
+	return "unknown:0"
+}
+
+func finSource(map[string]interface{}) string {
+	if _, file, line, ok := runtime.Caller(3); ok {
+		return fmt.Sprintf("%s:%d", path.Base(file), line)
+	}
+	return "unknown:0"
+}
+
+func funcName(map[string]interface{}) (name string) {
+	if pc, _, line, ok := runtime.Caller(3); ok {
+		if v, ok := funcMap.Load(pc); ok {
+			name = v.(string)
+		} else {
+			name = runtime.FuncForPC(pc).Name() + ":" + strconv.FormatInt(int64(line), 10)
+			funcMap.Store(pc, name)
+		}
+	}
+	return
 }
 
 func defaultFormatFuncFactory(s string) func(map[string]interface{}) string {

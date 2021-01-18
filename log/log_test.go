@@ -12,7 +12,7 @@ func TestLogWrapper(t *testing.T) {
 		context: &context{},
 		attach:  make(map[string]interface{}),
 	}
-	logger.SetFormat("[%D %t]%M 1213")
+	logger.SetFormat("[%D %t][%f]%M 1213")
 	fl := logger.wrapper("test")
 	d := make(map[string]interface{})
 	m := make(map[string]interface{})

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"linac"
 	"runtime"
-	"strconv"
 	"strings"
 )
 
@@ -115,28 +114,30 @@ func (l *logger) Print(sfmt string, value ...interface{}) {
 }
 
 func (l *logger) wrapper(message interface{}) string {
-	d := make(map[string]interface{})
-	d[_longTime] = struct{}{}
-	d[_shortTime] = struct{}{}
-	d[_longDate] = struct{}{}
-	d[_shortDate] = struct{}{}
-	d[_level] = l.level
-	d[_appid] = l.context.AppID
-	d[_env] = l.context.DeployEnv
-	d[_zone] = l.context.Zone
 	m := l.attach
 	m["msg"] = message
-	d[_message] = m
-	full, fin, line := l.sourceFile()
-	d[_fullSourse] = full + ":" + strconv.Itoa(line)
-	d[_finSourse] = fin + ":" + strconv.Itoa(line)
+	d := map[string]interface{}{
+		_longTime:   "",
+		_shortTime:  "",
+		_longDate:   "",
+		_shortDate:  "",
+		_level:      l.level,
+		_appid:      l.context.AppID,
+		_env:        l.context.DeployEnv,
+		_zone:       l.context.Zone,
+		_fullSourse: "",
+		_finSourse:  "",
+		_function:   "",
+		_message:    m,
+	}
 	return l.render.foramt(d)
 }
 
 func (l *logger) sourceFile() (full, fin string, line int) {
 	full, line, ok := fileTrace(3)
 	if ok {
-		arrFile := strings.Split("/", full)
+		arrFile := strings.Split(full, "/")
+		fmt.Println(arrFile)
 		fin = arrFile[len(arrFile)-1]
 	}
 	return
