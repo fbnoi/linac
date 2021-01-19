@@ -51,14 +51,15 @@ func New(path string, cnfs ...Config) (*FileWriter, error) {
 		return nil, err
 	}
 	ch := make(chan *bytes.Buffer, conf.ChanSize)
-
+	stdout := log.New(os.Stderr, "file write error: ", log.LstdFlags)
 	fw := &FileWriter{
-		conf:  conf,
-		dir:   dir,
-		fname: fname,
-		ch:    ch,
-		pool:  &sync.Pool{New: func() interface{} { return new(bytes.Buffer) }},
-		fp:    xfile,
+		conf:   conf,
+		dir:    dir,
+		fname:  fname,
+		ch:     ch,
+		pool:   &sync.Pool{New: func() interface{} { return new(bytes.Buffer) }},
+		fp:     xfile,
+		stdout: stdout,
 	}
 
 	fw.wg.Add(1)
@@ -81,7 +82,7 @@ type FileWriter struct {
 	writeTimeout time.Duration
 
 	fp     *xfile
-	stdout log.Logger
+	stdout *log.Logger
 
 	// 等待所有的buf被写入文件，平滑关闭文件日志
 	wg sync.WaitGroup
@@ -150,13 +151,13 @@ func (f *FileWriter) writeProcess() {
 				fbuf.Write(buf.Bytes())
 				f.releaseBuf(buf)
 			} else {
-				log.Printf("file write error")
-				log.Printf("%s", buf)
+				f.stdout.Printf("file write error")
+				f.stdout.Printf("%s", buf)
 			}
 		case <-writeTick.C:
 			if fbuf.Len() > 0 {
 				if err = f.writeToFile(fbuf.Bytes()); err != nil {
-					log.Printf("file write error: %s", err)
+					f.stdout.Printf("file write error: %s", err)
 				}
 				fbuf.Reset()
 			}
@@ -167,11 +168,11 @@ func (f *FileWriter) writeProcess() {
 		}
 
 		if err := f.writeToFile(fbuf.Bytes()); err != nil {
-			log.Printf("file write error: %s", err)
+			f.stdout.Printf("file write error: %s", err)
 		}
 		for buf := range f.ch {
 			if err = f.writeToFile(buf.Bytes()); err != nil {
-				log.Printf("file write error: %s", err)
+				f.stdout.Printf("file write error: %s", err)
 			}
 			f.releaseBuf(buf)
 		}
@@ -197,11 +198,15 @@ func (f *FileWriter) close() error {
 
 func (f *FileWriter) writeToFile(bs []byte) error {
 	if f.fp == nil {
-		log.Printf("file write error, file handler nil")
-		log.Printf("%s", bs)
+		f.stdout.Printf("file write error, file handler nil")
+		f.stdout.Printf("%s", bs)
 	}
 	_, err := f.fp.write(bs)
 	return err
+}
+
+func (f *FileWriter) checkRotate() {
+
 }
 
 // config FileWriter 的配置选项
