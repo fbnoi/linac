@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -15,53 +16,89 @@ var (
 		RotateFormat: "2016-01-02",
 		MaxFile:      999,
 		MaxSize:      1 << 30,
-		ChanSize:     1 << 16,
+		ChanSize:     1 << 30,
 		RotateTick:   time.Millisecond * 100,
-		WriteTimeout: time.Second * 2,
+		WriteTimeout: time.Second * 10,
 	}
 )
 
-// New 返回一个新的
-// func New(path string, cnfs ...Config) (*FileWriter, error) {
-// 	conf := _defaultConfig
-// 	for _, cnf := range cnfs {
-// 		cnf(conf)
-// 	}
+// New 返回一个新的 FileWriter
+func New(path string, cnfs ...Config) (*FileWriter, error) {
+	conf := _defaultConfig
+	for _, cnf := range cnfs {
+		cnf(conf)
+	}
 
-// 	fname := filepath.Base(path)
-// 	if fname == "" {
-// 		return nil, errors.New("file name connot be nil")
-// 	}
+	fname := filepath.Base(path)
+	if fname == "" {
+		return nil, errors.New("file name connot be nil")
+	}
 
-// 	dir := filepath.Dir(path)
-// 	fi, err := os.Stat(dir)
-// 	if err == nil && !fi.IsDir() {
-// 		return nil, fmt.Errorf("path %s already exists and not a directory", dir)
-// 	}
+	dir := filepath.Dir(path)
+	fi, err := os.Stat(dir)
+	if err == nil && !fi.IsDir() {
+		return nil, fmt.Errorf("path %s already exists and not a directory", dir)
+	}
 
-// 	if os.IsNotExist(err) {
-// 		if err = os.MkdirAll(dir, 0755); err != nil {
-// 			return nil, fmt.Errorf("create dir %s error: %s", dir, err.Error())
-// 		}
-// 	}
-// }
+	if os.IsNotExist(err) {
+		if err = os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("create dir %s error: %s", dir, err.Error())
+		}
+	}
+
+	xfile, err := newFile(path)
+	if err != nil {
+		return nil, err
+	}
+	ch := make(chan *bytes.Buffer, conf.ChanSize)
+
+	fw := &FileWriter{
+		conf:  conf,
+		dir:   dir,
+		fname: fname,
+		ch:    ch,
+		pool:  &sync.Pool{New: func() interface{} { return new(bytes.Buffer) }},
+		fp:    xfile,
+	}
+
+	fw.wg.Add(1)
+	go fw.writeProcess()
+
+	return fw, nil
+}
 
 // FileWriter 文件io
 // 采用缓冲池的方式写入文件
 // 现将写入的文件放入pool中的buf上，然后传入 chan，FileWriter后台的线程获取buf内容，并将buf放回pool中
 type FileWriter struct {
+	conf   *config
 	dir    string
 	fname  string
-	wc     chan *bytes.Buffer
+	ch     chan *bytes.Buffer
 	pool   *sync.Pool
 	closed bool
 
 	writeTimeout time.Duration
 
-	fp *xfile
+	fp     *xfile
+	stdout log.Logger
 
 	// 等待所有的buf被写入文件，平滑关闭文件日志
 	wg sync.WaitGroup
+}
+
+// newFile 创建一个新的 xfile
+func newFile(fpath string) (*xfile, error) {
+	fp, err := os.OpenFile(fpath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	fi, err := fp.Stat()
+	if err != nil {
+		return nil, err
+	}
+	return &xfile{fp: fp, filezise: fi.Size()}, nil
 }
 
 type xfile struct {
@@ -81,44 +118,47 @@ func (x *xfile) size() (n int, err error) {
 
 func (f *FileWriter) write(bs []byte) (int, error) {
 	if f.closed {
-		return 0, errors.New("file witer has been closed")
+		return 0, errors.New("file writer has been closed")
 	}
 	buf := f.getBuf()
 	buf.Write(bs)
 	if f.writeTimeout > 0 {
 		timeout := time.NewTimer(f.writeTimeout)
 		select {
-		case f.wc <- buf:
+		case f.ch <- buf:
 			return len(bs), nil
 		case <-timeout.C:
-			return 0, errors.New("file witer error, log channel is full")
+			return 0, errors.New("file write error, wait channel is full")
 		}
 	}
 	select {
-	case f.wc <- buf:
+	case f.ch <- buf:
 		return len(bs), nil
 	default:
-		return 0, fmt.Errorf("file witer error, log channel is full")
+		return 0, fmt.Errorf("file write error, wait channel is full")
 	}
 }
 
 func (f *FileWriter) writeProcess() {
-	connBuf := &bytes.Buffer{}
-	writeTick := time.NewTimer(10 * time.Millisecond)
+	fbuf := &bytes.Buffer{}
+	writeTick := time.NewTicker(10 * time.Millisecond)
 	var err error
 	for {
 		select {
-		case buf, ok := <-f.wc:
+		case buf, ok := <-f.ch:
 			if ok {
-				connBuf.Write(buf.Bytes())
+				fbuf.Write(buf.Bytes())
 				f.releaseBuf(buf)
+			} else {
+				log.Printf("file write error")
+				log.Printf("%s", buf)
 			}
 		case <-writeTick.C:
-			if connBuf.Len() > 0 {
-				if err = f.writeToFile(connBuf.Bytes()); err != nil {
+			if fbuf.Len() > 0 {
+				if err = f.writeToFile(fbuf.Bytes()); err != nil {
 					log.Printf("file write error: %s", err)
 				}
-				connBuf.Reset()
+				fbuf.Reset()
 			}
 		}
 
@@ -126,10 +166,10 @@ func (f *FileWriter) writeProcess() {
 			continue
 		}
 
-		if err := f.writeToFile(connBuf.Bytes()); err != nil {
+		if err := f.writeToFile(fbuf.Bytes()); err != nil {
 			log.Printf("file write error: %s", err)
 		}
-		for buf := range f.wc {
+		for buf := range f.ch {
 			if err = f.writeToFile(buf.Bytes()); err != nil {
 				log.Printf("file write error: %s", err)
 			}
@@ -150,7 +190,7 @@ func (f *FileWriter) getBuf() *bytes.Buffer {
 
 func (f *FileWriter) close() error {
 	f.closed = true
-	close(f.wc)
+	close(f.ch)
 	f.wg.Wait()
 	return nil
 }
