@@ -18,6 +18,9 @@ type Option func(*opt)
 
 // RotateFormat RotateFormat
 func RotateFormat(format string) Option {
+	if _, err := time.Parse(format, time.Now().Format(format)); err != nil {
+		panic(err)
+	}
 	return func(o *opt) {
 		o.RotateFormat = format
 	}
