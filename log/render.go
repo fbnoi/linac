@@ -11,9 +11,24 @@ import (
 	"time"
 )
 
-var funcMap sync.Map
+const (
+	_longTime   = "T"
+	_shortTime  = "t"
+	_longDate   = "D"
+	_shortDate  = "d"
+	_level      = "L"
+	_message    = "M"
+	_function   = "f"
+	_appid      = "i"
+	_env        = "e"
+	_zone       = "z"
+	_fullSourse = "S"
+	_finSourse  = "s"
+)
 
 var (
+	funcMap        sync.Map
+	_defaultFormat = "[%D %T][%i.%e][%S][%L]%M"
 	_mapFormetFunc = map[string]func(map[string]interface{}) string{
 		_longTime:   longTime,
 		_shortTime:  shortTime,

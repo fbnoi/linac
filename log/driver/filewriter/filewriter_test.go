@@ -67,18 +67,11 @@ func TestScanFile(t *testing.T) {
 	if fl.Len() != 3 {
 		t.Error(fmt.Errorf("scan error, expected 3 files, get %v", fl.Len()))
 	}
-	i := fl.Front()
-	for i != nil {
-		v := i.Value.(*rotateFile)
-		t.Log(v.path)
-		i = i.Next()
-	}
-	t.Error("test")
 }
 
 func TestRotateFile(t *testing.T) {
 	os.Remove("./test_data/test4.log")
-	w, err := New("./test_data/test4.log", WriteTimeout(5*time.Second), MaxFileSize(1<<20), RotateInterval(500*time.Millisecond), MaxFileList(9))
+	w, err := New("./test_data/test4.log", WriteTimeout(5*time.Second), MaxFileSize(1<<20), RotateInterval(500*time.Millisecond), MaxFileList(5))
 	if err != nil {
 		t.Error(err)
 	}
@@ -88,7 +81,7 @@ func TestRotateFile(t *testing.T) {
 		}
 	}
 	w.Close()
-	if w.rotateList.Len() != 9 {
+	if w.rotateList.Len() != 5 {
 		t.Error(fmt.Errorf("rotate file error, expected 5 files, get %v", w.rotateList.Len()))
 	}
 }

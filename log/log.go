@@ -3,9 +3,14 @@ package log
 import (
 	"fmt"
 	"linac"
+	"linac/log/driver"
 	"runtime"
 	"strings"
 )
+
+func init() {
+
+}
 
 // 日志等级
 const (
@@ -17,23 +22,8 @@ const (
 	LevelOff
 )
 
-const (
-	_longTime   = "T"
-	_shortTime  = "t"
-	_longDate   = "D"
-	_shortDate  = "d"
-	_level      = "L"
-	_message    = "M"
-	_function   = "f"
-	_appid      = "i"
-	_env        = "e"
-	_zone       = "z"
-	_fullSourse = "S"
-	_finSourse  = "s"
-)
-
 var (
-	_defaultFormat = "[%D %T][%i.%e][%S][%L]%M"
+	_defaultDriver = driver.NewStdOut()
 	_mapLevel      = map[int]string{
 		LevelDebug:   "DEBUG",
 		LevelInfo:    "INFO",
@@ -41,15 +31,16 @@ var (
 		LevelError:   "ERROR",
 		LevelFatal:   "FATAL",
 	}
+	log *logger
 )
 
 // Driver 日志驱动接口
 type Driver interface {
-	Write([]byte, int) error
+	Write([]byte, int) (int, error)
 }
 
-// context 日志上下文
-type context struct {
+// Config 日志配置
+type Config struct {
 	// Region 地区
 	Region string
 	// Zone 可用域
@@ -66,13 +57,15 @@ type context struct {
 	AppName string
 	// 自定义
 	Attech map[string]string
+	// module set
+	module map[string]int
 }
 
 type logger struct {
 	driver  Driver
 	level   int
 	render  *render
-	context *context
+	context *Config
 
 	attach map[string]interface{}
 }
@@ -87,6 +80,11 @@ func (l *logger) log(level int, str string) {
 		fmt.Printf("unsport log level %s", strLevel)
 		return
 	}
+}
+
+// SetDriver 设置日志驱动
+func (l *logger) SetDriver(driver Driver) {
+	l.driver = driver
 }
 
 // Attach 添加自定义日志选项
@@ -111,6 +109,23 @@ func (l *logger) Print(sfmt string, value ...interface{}) {
 	str := fmt.Sprintf(sfmt, value...)
 	str = l.wrapper(str)
 	l.driver.Write(linac.StringToBytes(str), l.level)
+}
+
+// SetFormat
+// %T time format at "15:04:05.999" on stdout handler, "15:04:05 MST" on file handler
+// %t time format at "15:04:05" on stdout handler, "15:04" on file on file handler
+// %D data format at "2006/01/02"
+// %d data format at "01/02"
+// %L log level e.g. INFO WARN ERROR
+// %M log message and additional fields: key=value this is log message
+// %f function name and line number e.g. model.Get:121
+// %i appid
+// %e deploy env e.g. dev prod
+// %z zone
+// %S full file name and line number: /a/b/c/d.go:23
+// %s final file name element and line number: d.go:23
+func (l *logger) SetFormat(format string) {
+	l.render.parse(format)
 }
 
 func (l *logger) wrapper(message interface{}) string {
@@ -142,24 +157,6 @@ func (l *logger) sourceFile() (full, fin string, line int) {
 	}
 	return
 }
-
-// SetFormat
-// %T time format at "15:04:05.999" on stdout handler, "15:04:05 MST" on file handler
-// %t time format at "15:04:05" on stdout handler, "15:04" on file on file handler
-// %D data format at "2006/01/02"
-// %d data format at "01/02"
-// %L log level e.g. INFO WARN ERROR
-// %M log message and additional fields: key=value this is log message
-// %f function name and line number e.g. model.Get:121
-// %i appid
-// %e deploy env e.g. dev prod
-// %z zone
-// %S full file name and line number: /a/b/c/d.go:23
-// %s final file name element and line number: d.go:23
-func (l *logger) SetFormat(format string) {
-	l.render.parse(format)
-}
-
 func fileTrace(dep int) (file string, line int, ok bool) {
 	_, file, line, ok = runtime.Caller(dep)
 	return

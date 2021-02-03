@@ -9,7 +9,7 @@ func TestLogWrapper(t *testing.T) {
 	logger := &logger{
 		level:   LevelDebug,
 		render:  &render{},
-		context: &context{},
+		context: &Config{},
 		attach:  make(map[string]interface{}),
 	}
 	logger.SetFormat("[%D %t][%f]%M 1213")
