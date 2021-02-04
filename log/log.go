@@ -4,34 +4,9 @@ import (
 	"fmt"
 	"linac"
 	"linac/log/driver"
+	"path"
 	"runtime"
-	"strings"
-)
-
-func init() {
-
-}
-
-// 日志等级
-const (
-	LevelDebug = iota
-	LevelInfo
-	LevelWarning
-	LevelError
-	LevelFatal
-	LevelOff
-)
-
-var (
-	_defaultDriver = driver.NewStdOut()
-	_mapLevel      = map[int]string{
-		LevelDebug:   "DEBUG",
-		LevelInfo:    "INFO",
-		LevelWarning: "WARNING",
-		LevelError:   "ERROR",
-		LevelFatal:   "FATAL",
-	}
-	log *logger
+	"sync"
 )
 
 // Driver 日志驱动接口
@@ -39,125 +14,115 @@ type Driver interface {
 	Write([]byte, int) (int, error)
 }
 
-// Config 日志配置
+type kv struct {
+	key   string
+	value interface{}
+}
+
+// 日志等级
+const (
+	LevelDebug = iota
+	LevelInfo
+	LevelWarn
+	LevelError
+	LevelFatal
+	LevelOff
+)
+
+var (
+	funcMap sync.Map
+)
+
+var (
+	_defaultDriver = driver.NewStdOut()
+	_mapLevel      = map[int]string{
+		LevelDebug: "DEBUG",
+		LevelInfo:  "INFO",
+		LevelWarn:  "WARN",
+		LevelError: "ERROR",
+		LevelFatal: "FATAL",
+	}
+	_log = "log"
+)
+
+var (
+	_r = &render{}
+	_d Driver
+	_v int
+	_c = &Config{}
+)
+
+// Config Config
 type Config struct {
-	// Region 地区
-	Region string
-	// Zone 可用域
-	Zone string
-	// Hostname 主机名
-	Hostname string
-	// DeployEnv 部署环境
-	DeployEnv string
-	// IP 服务IP
-	IP string
-	// AppID 服务ID
-	AppID string
-	// AppID 服务名
-	AppName string
-	// 自定义
-	Attech map[string]string
-	// module set
-	module map[string]int
+	Driver     string
+	MaxLogFile int
+	RotateSize int64
+	Specs      map[string]int
 }
 
-type logger struct {
-	driver  Driver
-	level   int
-	render  *render
-	context *Config
-
-	attach map[string]interface{}
-}
-
-// 写入日志
-func (l *logger) log(level int, str string) {
-	if level < l.level {
+func log(level int, kvs ...*kv) {
+	if level >= LevelOff || level < 0 {
 		return
 	}
-	strLevel, ok := _mapLevel[level]
-	if !ok {
-		fmt.Printf("unsport log level %s", strLevel)
-		return
-	}
-}
-
-// SetDriver 设置日志驱动
-func (l *logger) SetDriver(driver Driver) {
-	l.driver = driver
-}
-
-// Attach 添加自定义日志选项
-// 添加的键值对在每次写入日志时，都会携带写入日志
-func (l *logger) Attach(key string, value interface{}) {
-	if l.attach == nil {
-		l.attach = make(map[string]interface{})
-	}
-	l.attach[key] = value
-}
-
-// SetLevel 设置日志等级
-func (l *logger) SetLevel(level int) error {
-	if level > LevelOff || level < LevelDebug {
-		return fmt.Errorf("SetLevel(%v) error, unknown log level: %v", level, level)
-	}
-	l.level = level
-	return nil
-}
-
-func (l *logger) Print(sfmt string, value ...interface{}) {
-	str := fmt.Sprintf(sfmt, value...)
-	str = l.wrapper(str)
-	l.driver.Write(linac.StringToBytes(str), l.level)
-}
-
-// SetFormat
-// %T time format at "15:04:05.999" on stdout handler, "15:04:05 MST" on file handler
-// %t time format at "15:04:05" on stdout handler, "15:04" on file on file handler
-// %D data format at "2006/01/02"
-// %d data format at "01/02"
-// %L log level e.g. INFO WARN ERROR
-// %M log message and additional fields: key=value this is log message
-// %f function name and line number e.g. model.Get:121
-// %i appid
-// %e deploy env e.g. dev prod
-// %z zone
-// %S full file name and line number: /a/b/c/d.go:23
-// %s final file name element and line number: d.go:23
-func (l *logger) SetFormat(format string) {
-	l.render.parse(format)
-}
-
-func (l *logger) wrapper(message interface{}) string {
-	m := l.attach
-	m["msg"] = message
-	d := map[string]interface{}{
-		_longTime:   "",
-		_shortTime:  "",
-		_longDate:   "",
-		_shortDate:  "",
-		_level:      l.level,
-		_appid:      l.context.AppID,
-		_env:        l.context.DeployEnv,
-		_zone:       l.context.Zone,
-		_fullSourse: "",
-		_finSourse:  "",
-		_function:   "",
-		_message:    m,
-	}
-	return l.render.foramt(d)
-}
-
-func (l *logger) sourceFile() (full, fin string, line int) {
-	full, line, ok := fileTrace(3)
+	pc, file, line, ok := runtime.Caller(3)
+	var fname, funcname string
 	if ok {
-		arrFile := strings.Split(full, "/")
-		fmt.Println(arrFile)
-		fin = arrFile[len(arrFile)-1]
+		fname = path.Base(file)
+		if v, ok := funcMap.Load(pc); ok {
+			funcname = v.(string)
+		} else {
+			funcname = runtime.FuncForPC(pc).Name()
+			funcMap.Store(pc, funcname)
+		}
+	} else {
+		fname = "unknown"
 	}
-	return
+	fl := flevel(fname)
+	if level < fl {
+		return
+	}
+	kvs = append(kvs, kV(_fullSource, file), kV(_finSource, fmt.Sprintf("%s:%d", path.Base(file), line)), kV(_function, funcname))
+	m := make(map[string]interface{})
+	for _, kv := range kvs {
+		m[kv.key] = kv.value
+	}
+	_d.Write(linac.StringToBytes(_r.foramt(m)), level)
 }
-func fileTrace(dep int) (file string, line int, ok bool) {
-	_, file, line, ok = runtime.Caller(dep)
-	return
+
+// Print Print
+func Print(sfmt string, v ...interface{}) {
+	log(LevelInfo, kV(_message, fmt.Sprintf(sfmt, v...)))
+}
+
+// Info Info
+func Info(sfmt string, v ...interface{}) {
+	log(LevelInfo, kV(_message, fmt.Sprintf(sfmt, v...)))
+}
+
+// Debug Debug
+func Debug(sfmt string, v ...interface{}) {
+	log(LevelDebug, kV(_message, fmt.Sprintf(sfmt, v...)))
+}
+
+// Warn Warn
+func Warn(sfmt string, v ...interface{}) {
+	log(LevelWarn, kV(_message, fmt.Sprintf(sfmt, v...)))
+}
+
+// Error Error
+func Error(sfmt string, v ...interface{}) {
+	log(LevelError, kV(_message, fmt.Sprintf(sfmt, v...)))
+}
+
+// Fatal Fatal
+func Fatal(sfmt string, v ...interface{}) {
+	log(LevelFatal, kV(_message, fmt.Sprintf(sfmt, v...)))
+}
+
+func kV(key string, value interface{}) *kv {
+	return &kv{key: key, value: value}
+}
+
+func flevel(fname string) int {
+	return LevelDebug
 }
